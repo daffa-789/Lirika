@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -299,27 +298,14 @@ private fun ExpandedIslandFace(
     onToggleRepeat: () -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
-        // Three slots: cover, centred lyrics, and an equal empty slot. That keeps the words on
-        // the face's true centre line instead of drifting right with the cover.
-        Row(
+        // A full-width centred box holds the lyrics; the cover is overlaid at the start so it
+        // cannot push the words off the face's centre line.
+        Box(
             Modifier
                 .weight(1f)
-                .fillMaxWidth()
-                .padding(horizontal = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .fillMaxWidth(),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(Modifier.width(52.dp), contentAlignment = Alignment.CenterStart) {
-                DesktopArtwork(
-                    url = song?.thumbnailUrl,
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(RectangleShape)
-                        .background(Color(0xFF222226)),
-                    contentDescription = "Cover",
-                    px = ISLAND_COVER_LARGE_PX,
-                )
-            }
-
             key(song?.videoId) {
                 AnimatedContent(
                     targetState = now.activeIndex,
@@ -330,7 +316,9 @@ private fun ExpandedIslandFace(
                                 fadeOut(tween(LYRIC_ROLL_MS)),
                         )
                     },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 62.dp),
                     label = "islandLinesExpanded",
                 ) { index ->
                     val at = now.at(index)
@@ -341,8 +329,17 @@ private fun ExpandedIslandFace(
                     }
                 }
             }
-
-            Spacer(Modifier.width(52.dp))
+            DesktopArtwork(
+                url = song?.thumbnailUrl,
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 10.dp)
+                    .size(52.dp)
+                    .clip(RectangleShape)
+                    .background(Color(0xFF222226)),
+                contentDescription = "Cover",
+                px = ISLAND_COVER_LARGE_PX,
+            )
         }
 
         // Progress sits between the lyrics and the controls.
