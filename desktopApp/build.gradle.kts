@@ -142,8 +142,9 @@ dependencies {
     implementation("net.java.dev.jna:jna-platform:${property("jna")}")
 
     // Linux desktop media controls use the standard session-bus MPRIS interfaces. They stay on the
-    // Windows classpath too, because one source set holds both platforms' window and bus code; the
-    // Windows build never loads them, and the strip below shrinks what they carry.
+    // Windows classpath too: one source set holds both platforms' window and bus code, and a D-Bus
+    // class is touched while composing the tray even on Windows. The strip below drops the foreign
+    // natives that would otherwise inflate the package.
     implementation("com.github.hypfvieh:dbus-java-core:5.2.0")
     implementation("com.github.hypfvieh:dbus-java-transport-junixsocket:5.2.0")
 
@@ -688,7 +689,9 @@ compose.desktop {
         }.get()
         mainClass = composeMainClass
         jvmArgs("-Xmx512m")
-        jvmArgs("-XX:+UseG1GC", "-XX:G1PeriodicGCInterval=20000", "-XX:G1PeriodicGCSystemLoadThreshold=0")
+        jvmArgs("-XX:+UseG1GC")
+        // A forced collection every 20 s kept the idle heap small but woke the process on a timer
+        // even while nothing was playing. G1's own pacing is enough for a music player.
         jvmArgs("-Dbitchord.version=$appVersion")
         if (lastfmApiKey.isNotBlank() && lastfmSecret.isNotBlank()) {
             jvmArgs("-Dbitchord.lastfm.key=$lastfmApiKey", "-Dbitchord.lastfm.secret=$lastfmSecret")

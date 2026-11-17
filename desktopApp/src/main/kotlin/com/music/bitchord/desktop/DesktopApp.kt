@@ -45,9 +45,7 @@ import com.music.bitchord.playback.QueueTimeline.asQueueEntry
 import com.music.bitchord.ui.LyricsProviderState
 import com.music.bitchord.data.lyrics.LyricsSource
 import com.music.bitchord.ui.player.LyricsSidePanel
-import com.music.bitchord.ui.player.NowPlayingScreen
 import com.music.bitchord.ui.player.QueueSidePanel
-import com.music.bitchord.ui.player.PlayerBack
 import com.music.bitchord.ui.player.RepeatModes
 import androidx.compose.runtime.SideEffect
 import com.music.bitchord.data.model.QueueTier
@@ -351,8 +349,11 @@ private const val SCROBBLE_THRESHOLD_MS = 180_000L
 /** Used for tracking restart of the current song when previous button is pressed. */
 private const val BACK_RESTARTS_AFTER_MS = 10_000L
 
-/** How long a manual skip takes to blend into the next track when crossfade-on-skip is on. */
-private const val SKIP_MIX_ON_SKIP_SECONDS = 15
+/** How long a manual skip blends into the next track when crossfade-on-skip is on. */
+private const val SKIP_MIX_ON_SKIP_SECONDS = 2
+
+/** One-time marker: existing profiles get skip-mix on, but a later choice of theirs is kept. */
+private const val KEY_SKIP_MIX_DEFAULT_ON = "crossfade_on_skip_default_on_v1"
 
 /** How long the supplier waits for the server to echo an AutoPlay queue addition. */
 private const val PARTY_AUTOPLAY_ECHO_TIMEOUT_MS = 5_000L
@@ -399,6 +400,9 @@ internal enum class DesktopRepeatMode {
 @Composable
 fun BitChordDesktopApp() {
     val scope = rememberCoroutineScope()
+    // The island is the player while it is on. The full sheet is not a second view of the same
+    // song — it is a different surface, and showing both is what duplicated the cover and title.
+    val islandEnabled by DesktopDynamicIslandSettings.enabled.collectAsState()
 
     val persistence = remember { DesktopPersistence() }
     // In-app update notifications disabled for BitChord Windows Edition
@@ -494,12 +498,6 @@ fun BitChordDesktopApp() {
     // because each is driven by a dialog that is modal.
     var playlistBusy by remember { mutableStateOf(false) }
     var playlistError by remember { mutableStateOf<String?>(null) }
-    // The album and artist pages the playing track belongs to, looked up while
-    // the player is open. Whatever started a track knew its title and artwork
-    // but rarely its ids — a home-feed tile carries neither — so without this
-    // the credit under the title is not a link at all. Android does the same
-    // thing, and for the same reason; see its `links` in MainActivity.
-    var trackLinks by remember { mutableStateOf<Song?>(null) }
     // Settings is a modal over whatever page is open, the way Music puts its own preferences in a
     // sheet rather than a navigation destination.
     var autoplay by remember { mutableStateOf(persistence.boolean("autoplay", true)) }
@@ -516,9 +514,20 @@ fun BitChordDesktopApp() {
     // than once per recomposition.
     var autoplaySeed by remember { mutableStateOf<String?>(null) }
     var autoplayJob by remember { mutableStateOf<Job?>(null) }
-    // A manual skip blends into the already-prepared next track instead of cutting. Kunci
-    // preferensinya tetap "automix_on_skip" supaya pilihan yang sudah tersimpan tidak hilang.
-    var crossfadeOnSkip by remember { mutableStateOf(persistence.boolean("automix_on_skip", false)) }
+    // A manual skip blends into the already-prepared next track instead of cutting. The stored
+    // key stays "automix_on_skip"; a one-time marker turns it on for profiles that never chose,
+    // while anyone who later switches it off keeps that choice.
+    var crossfadeOnSkip by remember {
+        mutableStateOf(
+            if (!persistence.boolean(KEY_SKIP_MIX_DEFAULT_ON, false)) {
+                persistence.saveBoolean("automix_on_skip", true)
+                persistence.saveBoolean(KEY_SKIP_MIX_DEFAULT_ON, true)
+                true
+            } else {
+                persistence.boolean("automix_on_skip", false)
+            },
+        )
+    }
     var shuffle by remember { mutableStateOf(persistence.boolean("shuffle", false)) }
     var repeatMode by remember {
         mutableStateOf(
@@ -648,6 +657,11 @@ fun BitChordDesktopApp() {
         DesktopSleepTimer.remainingMs()
     }
     var openedCollection by remember { mutableStateOf<DesktopCollection?>(null) }
+    // While the island carries a song, no song/album detail page stays open under it. This is the
+    // screen that otherwise reads as a second player even after the sheet itself was retired.
+    LaunchedEffect(islandEnabled, selectedSong?.videoId) {
+        if (islandEnabled && selectedSong != null) openedCollection = null
+    }
     var collectionLoadingMore by remember { mutableStateOf(false) }
     var collectionError by remember { mutableStateOf<String?>(null) }
     var collectionReloads by remember { mutableStateOf(0) }
@@ -780,6 +794,9 @@ fun BitChordDesktopApp() {
             DesktopQueue.startingAt(built.timeline, built.startIndex)
         }
         preShuffleOrder = if (shuffle) built.timeline.map(DesktopQueue::orderKey) else emptyList()
+        // Once music starts the island is the surface. A song or album detail page left on screen
+        // under it is the second panel the eye reads as a duplicate player, so close that page.
+        openedCollection = null
         playCurrent()
     }
 
@@ -1446,7 +1463,10 @@ fun BitChordDesktopApp() {
             loadAutoplaySongs()
         }
     }
-    LaunchedEffect(Unit) {
+    // No timer armed: no ticking at all. "Stop after this track" is handled at the track end,
+    // not by a wall-clock poll, so it does not need a loop either.
+    LaunchedEffect(sleepTimerMinutes) {
+        if (sleepTimerMinutes == null) return@LaunchedEffect
         while (currentCoroutineContext().isActive) {
             delay(1_000L)
             if (DesktopSleepTimer.isExpired()) {
@@ -1622,15 +1642,6 @@ fun BitChordDesktopApp() {
     LaunchedEffect(destination, youtubeSignedIn, sessionRevision) {
         if (destination != DesktopDestination.HISTORY || !youtubeSignedIn) return@LaunchedEffect
         DesktopSearchClient.history().onSuccess { remoteHistory = it }
-    }
-    LaunchedEffect(selectedSong?.videoId, overlays.nowPlaying) {
-        trackLinks = null
-        val current = selectedSong ?: return@LaunchedEffect
-        // Only while the player is up, so playing from the mini player costs
-        // nothing, and only when something is actually missing.
-        if (!overlays.nowPlaying) return@LaunchedEffect
-        if (current.artistId != null && current.albumId != null) return@LaunchedEffect
-        trackLinks = DesktopSearchClient.trackLinks(current.videoId).getOrNull()
     }
     // Keyed on the same things, plus the rate: Discord counts the bar down on
     // its own clock, so only a change to what it was told is worth another push.
@@ -1966,7 +1977,6 @@ fun BitChordDesktopApp() {
 
     /** Settings in place of the page — from the sidebar, the account switcher or the tray. */
     fun openSettings() {
-        overlays.nowPlaying = false
         if (overlays.settingsPage == null) settingsSession++
         overlays.settingsPage = DesktopSettingsPage.MAIN
     }
@@ -2171,7 +2181,7 @@ fun BitChordDesktopApp() {
             // so it has to raise the window before it does anything inside it.
             onActivate = {
                 DesktopWindowVisibility.show()
-                overlays.nowPlaying = true
+                DesktopDynamicIslandSettings.setEnabled(true)
             },
             onPlayPause = { if (selectedSong != null) togglePlayPauseFromUser() },
         )
@@ -2200,7 +2210,7 @@ fun BitChordDesktopApp() {
             onPrevious = ::playPrevious,
             onOpenPlayer = {
                 DesktopWindowVisibility.show()
-                overlays.nowPlaying = true
+                DesktopDynamicIslandSettings.setEnabled(true)
             },
             onOpenSettings = {
                 DesktopWindowVisibility.show()
@@ -2627,15 +2637,8 @@ fun BitChordDesktopApp() {
         onPlayNext = ::playNext,
         onAddToQueue = ::addToQueue,
         onPlayInIsland = ::playInDynamicIsland,
-        // Both leave the player, the way opening a page from Android's sheet collapses it.
-        onOpenAlbum = { id ->
-            overlays.nowPlaying = false
-            openAlbum(id)
-        },
-        onOpenArtist = { id ->
-            overlays.nowPlaying = false
-            openArtist(id, song.artist)
-        },
+        onOpenAlbum = ::openAlbum,
+        onOpenArtist = { id -> openArtist(id, song.artist) },
         onSleepTimer = { minutes ->
             if (minutes == null) DesktopSleepTimer.cancel() else DesktopSleepTimer.start(minutes)
         },
@@ -2660,9 +2663,9 @@ fun BitChordDesktopApp() {
             volume = it
             persistence.saveString("volume", it.toString())
         }
-        // The island's own menus reach the app through here, so a right-click on the capsule can
-        // open the player or Settings exactly as the toolbar's buttons do.
-        DesktopIslandState.onOpenNowPlaying = { overlays.nowPlaying = selectedSong != null }
+        // The island's own menus reach the app through here: Settings and the lyrics column live
+        // in the main window. Playback never opens the full player from the capsule — one song,
+        // one screen.
         DesktopIslandState.onOpenSettings = { openSettings() }
         DesktopIslandState.onOpenLyrics = { overlays.toggleSidePanel(DesktopSidePanel.LYRICS) }
     }
@@ -2701,6 +2704,12 @@ fun BitChordDesktopApp() {
         )
     }
 
+    /** Every island press means "the island is the player now" — retire any page under it. */
+    fun dismissPlayerPages() {
+        overlays.sidePanel = null
+        openedCollection = null
+    }
+
     LaunchedEffect(selectedSong, playback.isPlaying, sharedLyrics, repeatMode, liveQueue) {
         DesktopIslandState.currentSong.value = selectedSong
         DesktopIslandState.isPlaying.value = playback.isPlaying
@@ -2710,16 +2719,30 @@ fun BitChordDesktopApp() {
         // the queue sheet's tap makes — with the main window closed.
         DesktopIslandState.queueSongs.value = liveQueue.songs
         DesktopIslandState.queueIndex.value = liveQueue.index
-        DesktopIslandState.onPlayPause = { if (selectedSong != null) togglePlayPauseFromUser() }
-        DesktopIslandState.onNext = { playNext() }
-        DesktopIslandState.onPrevious = { playPrevious() }
-        DesktopIslandState.onPlayQueueIndex = ::playQueueIndex
+        DesktopIslandState.onPlayPause = {
+            dismissPlayerPages()
+            if (selectedSong != null) togglePlayPauseFromUser()
+        }
+        DesktopIslandState.onNext = {
+            dismissPlayerPages()
+            playNext()
+        }
+        DesktopIslandState.onPrevious = {
+            dismissPlayerPages()
+            playPrevious()
+        }
+        DesktopIslandState.onPlayQueueIndex = {
+            dismissPlayerPages()
+            playQueueIndex(it)
+        }
         // The island's scrub row speaks in fractions of the song; the player takes milliseconds.
         DesktopIslandState.onSeek = { fraction ->
+            dismissPlayerPages()
             val duration = playback.durationMs
             if (duration > 0L) seekPlayer((fraction.coerceIn(0f, 1f) * duration).toLong())
         }
         DesktopIslandState.onToggleRepeat = {
+            dismissPlayerPages()
             repeatMode = repeatMode.next()
             persistence.saveString("repeat_mode", repeatMode.name)
         }
@@ -2849,10 +2872,7 @@ fun BitChordDesktopApp() {
                         }
                         // The hint in the sidebar's field, and the way back to it from anywhere.
                         event.isCtrlPressed && !event.isAltPressed && event.key == Key.K -> {
-                            if (overlays.settingsPage != null || overlays.nowPlaying) {
-                                overlays.settingsPage = null
-                                overlays.nowPlaying = false
-                            }
+                            if (overlays.settingsPage != null) overlays.settingsPage = null
                             selectDestination(DesktopDestination.SEARCH)
                             true
                         }
@@ -2862,7 +2882,7 @@ fun BitChordDesktopApp() {
                             DesktopIslandState.toggle()
                             true
                         }
-                        event.key == Key.DirectionLeft && event.isAltPressed && !overlays.nowPlaying -> {
+                        event.key == Key.DirectionLeft && event.isAltPressed -> {
                             goBack()
                             true
                         }
@@ -2870,16 +2890,9 @@ fun BitChordDesktopApp() {
 
 
 
-                        // One layer at a time, innermost first: the player's own side panel, then
-                        // the player.
+                        // One layer at a time, innermost first: the lyrics or queue column,
+                        // then a page of Settings.
                         event.key == Key.Escape -> when {
-                            // The player's own layers first — the lyrics, the queue, a
-                            // drawer — in the order Android's back reaches them.
-                            overlays.nowPlaying && PlayerBack.dispatch() -> true
-                            overlays.nowPlaying -> {
-                                overlays.nowPlaying = false
-                                true
-                            }
                             overlays.sidePanel != null -> {
                                 overlays.sidePanel = null
                                 true
@@ -2973,7 +2986,12 @@ fun BitChordDesktopApp() {
                             repeatMode = it
                             persistence.saveString("repeat_mode", it.name)
                         },
-                        onOpenNowPlaying = { overlays.nowPlaying = true },
+                        // "Open player" means the island: the full sheet is retired, so this
+                        // brings the capsule back rather than opening a second surface.
+                        onOpenNowPlaying = {
+                            DesktopDynamicIslandSettings.setEnabled(true)
+                            DesktopWindowVisibility.show()
+                        },
                         onOpenLyrics = { overlays.toggleSidePanel(DesktopSidePanel.LYRICS) },
                         onOpenQueue = { overlays.toggleSidePanel(DesktopSidePanel.QUEUE) },
                         onOpenAudioOutput = { overlays.audioOutput = true },
@@ -3013,221 +3031,6 @@ fun BitChordDesktopApp() {
                     }
                 },
                 overlay = {
-                    DesktopPlayerSheet(
-                        visible = overlays.nowPlaying && selectedSong != null,
-                        onDismiss = {
-                            DesktopWindowMode.exit()
-                            overlays.nowPlaying = false
-                        },
-                    ) { windowWidth, windowHeight ->
-                        val current = selectedSong ?: return@DesktopPlayerSheet
-                        val playerSong = trackLinks?.takeIf { it.videoId == current.videoId }
-                            ?.let { extra ->
-                                current.copy(
-                                    artistId = current.artistId ?: extra.artistId,
-                                    // Same as on the phone: the watch-queue lookup
-                                    // is what carries a channel per credited
-                                    // artist, so it is what makes every name in
-                                    // the credit line openable.
-                                    artists = current.artists.ifEmpty { extra.artists },
-                                    albumId = current.albumId ?: extra.albumId,
-                                    albumName = current.albumName ?: extra.albumName,
-                                )
-                            }
-                            ?: current
-                        NowPlayingScreen(
-                            song = playerSong,
-                            isPlaying = playback.isPlaying,
-                            isLoading = playback.isLoading,
-                            position = playerPosition,
-                            durationMs = playback.durationMs,
-                            audioVersionSwitching = false,
-                            qualityUpgraded = false,
-                            queue = liveQueue.songs,
-                            queueIndex = liveQueue.index,
-                            hasPrevious = liveQueue.hasPrevious,
-                            hasNext = liveQueue.hasNext,
-                            repeatMode = when (repeatMode) {
-                                DesktopRepeatMode.OFF -> RepeatModes.OFF
-                                DesktopRepeatMode.ONE -> RepeatModes.ONE
-                                DesktopRepeatMode.ALL -> RepeatModes.ALL
-                            },
-                            shuffleEnabled = shuffle,
-                            autoplayEnabled = autoplay,
-                            signedIn = youtubeSignedIn,
-                            accountName = activeAccount?.profiles?.firstOrNull { it.profileId == activeProfileId }?.name?.takeIf(String::isNotBlank)
-                                ?: activeAccount?.name?.takeIf(String::isNotBlank),
-                            likeStatus = when (current.videoId) {
-                                in likedIds -> LikeStatus.LIKE
-                                in dislikedIds -> LikeStatus.DISLIKE
-                                else -> LikeStatus.INDIFFERENT
-                            },
-                            onToggleLike = { toggleLike(current) },
-                            onPlayPause = ::togglePlayPauseFromUser,
-                            onNext = ::playNext,
-                            onPrevious = ::playPrevious,
-
-                            onSeek = ::seekPlayer,
-                            onSeekFraction = { fraction ->
-                                val duration = playbackEngine.state.value.durationMs
-                                if (duration > 0) seekPlayer((fraction * duration).toLong())
-                            },
-                            onToggleShuffle = { setShuffle(!shuffle) },
-                            // The phone's order: off, all, one.
-                            onCycleRepeat = {
-                                repeatMode = when (repeatMode) {
-                                    DesktopRepeatMode.OFF -> DesktopRepeatMode.ALL
-                                    DesktopRepeatMode.ALL -> DesktopRepeatMode.ONE
-                                    DesktopRepeatMode.ONE -> DesktopRepeatMode.OFF
-                                }
-                                persistence.saveString("repeat_mode", repeatMode.name)
-                            },
-                            onToggleAutoplay = {
-                                setAutoplay(!autoplay)
-                            },
-                            onJumpTo = ::playQueueIndex,
-                            onRemoveFromQueue = ::removeFromQueue,
-                            onMoveInQueue = ::moveInQueue,
-                            onClearQueue = ::clearQueue,
-                            onOpenMenu = { playerMenuOpen = true },
-                            onOpenAlbum = { id ->
-                                overlays.nowPlaying = false
-                                openAlbum(id)
-                            },
-                            // The lead credit carries the track's own channel
-                            // id and opens straight away; anyone else on the
-                            // line has no id, so the page is found from the
-                            // name — and only when the answer is that name
-                            // exactly, so a fragment like "2115" opens nothing
-                            // rather than White 2115.
-                            onOpenArtist = { id, name ->
-                                overlays.nowPlaying = false
-                                if (id != null) {
-                                    openArtist(id, name)
-                                } else {
-                                    scope.launch {
-                                        YtMusicRepository.findArtistPageId(name).getOrNull()
-                                            ?.let { found -> openArtist(found, name) }
-                                    }
-                                }
-                            },
-                            onOpenPlaybackSource = {
-                                val id = playerSong.playbackSourceId
-                                overlays.nowPlaying = false
-                                if (playerSong.playbackSourceType == PlaybackSourceType.BROWSE && id != null) {
-                                    openAlbum(id)
-                                }
-                            },
-
-                            lyrics = sharedLyrics,
-                            lyricsSource = sharedLyricsSource,
-                            lyricsProviderStates = providerStates,
-                            onSelectLyricsProvider = { source -> lyricsOnly = source.label },
-                            lyricsUnavailable = sharedLyricsUnavailable,
-                            lyricsOffsetOpen = false,
-                            onDismissLyricsOffset = {},
-                            windowWidth = windowWidth,
-                            windowHeight = windowHeight,
-                            playerOverflowOpen = playerOverflowOpen,
-                            playerQueueToggle = playerQueueToggle,
-                            playerQueueShowing = playerQueueShowing,
-                            playerMenuAnchor = playerMenuAnchor,
-                            playerTranslateToggle = playerTranslateToggle,
-                            playerShowingTranslation = playerShowingTranslation,
-                        )
-                        // The sheet's own origin in the window, so the menu below can be
-                        // placed on the "…" button the player reports in window terms.
-                        val sheetOrigin = remember { mutableStateOf(Offset.Zero) }
-                        Spacer(
-                            Modifier
-                                .matchParentSize()
-                                .onGloballyPositioned { sheetOrigin.value = it.positionInWindow() },
-                        )
-                        if (playerMenuOpen) {
-                            // Hung off the "…" itself, wherever the layout put it. Read in
-                            // the offset block, so the sheet moving relays this out and
-                            // recomposes nothing.
-                            val anchorSize = playerMenuAnchor.value?.let { anchor ->
-                                with(LocalDensity.current) { DpSize(anchor.width.toDp(), anchor.height.toDp()) }
-                            } ?: DpSize(34.dp, 34.dp)
-                            Box(
-                                Modifier
-                                    .offset {
-                                        val anchor = playerMenuAnchor.value
-                                            ?: return@offset IntOffset(
-                                                (windowWidth.roundToPx() - 34.dp.roundToPx()) / 2,
-                                                (windowHeight.roundToPx() - 34.dp.roundToPx()) / 2,
-                                            )
-                                        IntOffset(
-                                            (anchor.left - sheetOrigin.value.x).roundToInt(),
-                                            (anchor.top - sheetOrigin.value.y).roundToInt(),
-                                        )
-                                    }
-                                    .size(anchorSize),
-                            ) {
-                                DesktopSongMenuFor(
-                                    song = playerSong,
-                                    liked = current.videoId in likedIds,
-                                    actions = playerSongActions(current),
-                                    onToggleLike = { toggleLike(current) },
-                                    onRevertToOriginal = {
-                                        DesktopOriginalVersion.pin(current.videoId)
-                                        playbackEngine.reloadCurrent()
-                                    }.takeIf {
-                                        playback.streamSourceId != null &&
-                                            playback.streamSourceId != "youtube" &&
-                                            DesktopMusicSources.hasYouTubeOriginal(current) &&
-                                            !DesktopOriginalVersion.isPinned(current.videoId)
-                                    },
-                                    onUpgradeQuality = {
-                                        DesktopOriginalVersion.clear(current.videoId)
-                                        playbackEngine.reloadCurrent(forceSourceRefresh = true)
-                                    }.takeIf { DesktopOriginalVersion.isPinned(current.videoId) },
-                                    onMore = {
-                                        playerMenuOpen = false
-                                        playerOverflowOpen.value = true
-                                    },
-                                    onSwitchLyricsQueue = {
-                                        playerMenuOpen = false
-                                        playerQueueToggle.value = true
-                                    },
-                                    queueShowing = playerQueueShowing.value,
-                                    onTranslate = {
-                                        playerMenuOpen = false
-                                        playerTranslateToggle.value = true
-                                    },
-                                    showingTranslation = playerShowingTranslation.value,
-                                    translateEnabled = !sharedLyrics.isNullOrEmpty(),
-                                    lyricsProviders = menuLyricsProviders,
-                                    onSelectLyricsProvider = { label -> lyricsOnly = label },
-                                    onSearchLyrics = { title, artist -> searchLyrics(title, artist) },
-                                    lyricsOffsetMs = lyricsOffsetMs,
-                                    onSetLyricsOffset = { DesktopPlayerSettings.setLyricsOffsetMs(it) },
-                                    onDismiss = { playerMenuOpen = false },
-                                )
-                            }
-                        }
-                        val message by DesktopPlayerHost.messages.collectAsState()
-                        LaunchedEffect(message) {
-                            if (message != null) {
-                                delay(2_500)
-                                DesktopPlayerHost.messages.value = null
-                            }
-                        }
-                        message?.let { text ->
-                            Text(
-                                text = text,
-                                color = Color.White,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .padding(bottom = 36.dp)
-                                    .clip(RoundedCornerShape(50))
-                                    .background(Color.Black.copy(alpha = 0.72f))
-                                    .padding(horizontal = 18.dp, vertical = 10.dp),
-                            )
-                        }
-                    }
                     // The floating capsule is a window of its own now — see DesktopIslandWindow —
                     // so that hiding this window leaves it on screen.
 

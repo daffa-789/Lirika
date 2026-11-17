@@ -119,9 +119,9 @@ internal fun DynamicIslandMenu(
 
         MenuAction(DesktopStrings["d_island_open_app", "Open BitChord…"], BitChordIcons.MusicNote) {
             onDismissRequest()
-            // "Hide BitChord" put the window away; this is the way back, landing on the player.
+            // Bringing the main window back is enough. The island is the player when it is on
+            // screen; opening the full player as well would put two surfaces on the same song.
             DesktopWindowVisibility.show()
-            DesktopIslandState.onOpenNowPlaying?.invoke()
         }
         MenuAction(DesktopStrings["d_island_hide_app", "Hide BitChord"], Icons.Rounded.VisibilityOff) {
             onDismissRequest()

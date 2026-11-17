@@ -49,7 +49,6 @@ internal object DesktopIslandState {
     var onNext: (() -> Unit)? = null
     var onPrevious: (() -> Unit)? = null
     var onToggleRepeat: (() -> Unit)? = null
-    var onOpenNowPlaying: (() -> Unit)? = null
 
     /**
      * Jumps the playhead to a fraction of the song, for the scrub row under the expanded capsule.

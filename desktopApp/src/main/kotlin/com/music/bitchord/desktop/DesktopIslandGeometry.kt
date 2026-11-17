@@ -31,10 +31,10 @@ internal class IslandScreen(
 /**
  * Where the capsule rests on a screen, for a given size.
  *
- * The island is pinned to the top centre of the screen: it is part of the display, the way a
- * Dynamic Island is part of the phone, and not a window that can be pushed around. Its centre
- * stays put while it grows, so the capsule opens around itself and the glass never slides away
- * from the spot the eye expects it in.
+ * The island is pinned to the very top centre of the screen: it is part of the display, the way a
+ * Dynamic Island is part of the phone, and not a window that can be pushed around. Its top edge
+ * touches the screen's work area — no margin, no visible gap — and it opens downward from there.
+ * Its centre stays put horizontally while it grows, so the capsule opens around itself.
  */
 internal fun islandRestRect(
     screen: IslandScreen,
@@ -42,15 +42,15 @@ internal fun islandRestRect(
     height: Float,
 ): IslandRect {
     val left = (screen.left + screen.right) / 2f - width / 2f
-    val top = screen.top + ISLAND_SCREEN_MARGIN
+    val top = screen.top
     return IslandRect(left, top, left + width, top + height)
 }
 
 /**
  * The capsule's rect once it has been kept inside the screen.
  *
- * The margin is what keeps the capsule off the screen's edges, and the clamp is what keeps a
- * capsule wider than the screen itself from hanging off both sides.
+ * The clamp keeps a capsule wider than the screen itself from hanging off either side; the top
+ * is left exactly at the work area's edge, with no margin to show as a gap.
  */
 internal fun islandPlacedRect(
     screen: IslandScreen,
@@ -69,5 +69,3 @@ internal fun islandPlacedRect(
     return IslandRect(left, top, left + rest.width, top + rest.height)
 }
 
-/** How far the capsule's window sits from the screen edge. */
-internal const val ISLAND_SCREEN_MARGIN = 18f

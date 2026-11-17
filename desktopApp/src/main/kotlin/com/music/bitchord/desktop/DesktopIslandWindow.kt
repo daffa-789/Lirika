@@ -3,7 +3,6 @@ package com.music.bitchord.desktop
 import androidx.compose.animation.core.animate
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -147,10 +146,10 @@ internal fun DesktopIslandWindow() {
      * floating in a box of empty space.
      */
     val expansion = remember { mutableFloatStateOf(0f) }
-    // A capsule that lets clicks through is a readout: it does not react to the pointer either. A
-    // paused island is not a player that has stopped, but a player that has stopped — and a stopped
-    // player is not something the pointer opens. Only a playing one does.
-    val wantExpanded = (!clickThrough && hovered.value && isPlaying) || menuOpen || seeking
+    // A paused island is still the same island: it keeps its cover, its line and its controls,
+    // and hovering it opens the transport so Play is one press away. It no longer collapses into a
+    // tiny doorbell the moment playback stops.
+    val wantExpanded = !clickThrough && (hovered.value || menuOpen || seeking)
     LaunchedEffect(wantExpanded) {
         animate(
             initialValue = expansion.floatValue,
@@ -225,16 +224,22 @@ internal fun DesktopIslandWindow() {
         /**
          * Where the pointer is, and whether it is on the glass.
          *
-         * The glass is the window without the slack its shadow needs, so the island opens when
-         * the pointer is on the capsule itself and not when it merely passes close by.
+         * The glass *is* the window now — there is no shadow slack around it — so the island opens
+         * only when the pointer is on the capsule itself. Polling also stops while paused or in
+         * click-through mode, neither of which can expand the island; that saves a 25 Hz AWT call
+         * whenever the capsule is just sitting there.
          */
-        LaunchedEffect(window, density) {
-            val slack = (ISLAND_WINDOW_PADDING * density).roundToInt()
+        LaunchedEffect(window, density, isPlaying, clickThrough) {
             while (true) {
+                if (clickThrough) {
+                    hovered.value = false
+                    delay(POINTER_POLL_MS)
+                    continue
+                }
                 val pointer = runCatching { java.awt.MouseInfo.getPointerInfo().location }.getOrNull()
                 val onGlass = pointer != null &&
-                    pointer.x >= window.x + slack && pointer.x < window.x + window.width - slack &&
-                    pointer.y >= window.y + slack && pointer.y < window.y + window.height - slack
+                    pointer.x >= window.x && pointer.x < window.x + window.width &&
+                    pointer.y >= window.y && pointer.y < window.y + window.height
                 hovered.value = onGlass
                 delay(POINTER_POLL_MS)
             }
@@ -273,10 +278,10 @@ internal fun DesktopIslandWindow() {
                 val height = (ISLAND_COLLAPSED_HEIGHT +
                     (ISLAND_EXPANDED_HEIGHT - ISLAND_COLLAPSED_HEIGHT) * grown) * scale
                 val placed = work?.let { islandPlacedRect(it, width, height) }
-                val x = ((placed?.left ?: 0f) - ISLAND_WINDOW_PADDING) * density
-                val y = ((placed?.top ?: 0f) - ISLAND_WINDOW_PADDING) * density
-                val w = (width + ISLAND_WINDOW_PADDING * 2f) * density
-                val h = (height + ISLAND_WINDOW_PADDING * 2f) * density
+                val x = (placed?.left ?: 0f) * density
+                val y = (placed?.top ?: 0f) * density
+                val w = width * density
+                val h = height * density
                 window.setBounds(
                     x.roundToInt(),
                     y.roundToInt(),
@@ -287,22 +292,14 @@ internal fun DesktopIslandWindow() {
         }
 
         Box(
-            Modifier
-                .fillMaxSize()
-                .padding(ISLAND_WINDOW_PADDING.dp),
+            Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
             Box(
                 Modifier
                     .islandContextMenu { menuOpen = true },
             ) {
-                if (showing && song != null && !isPlaying) {
-                    // A stopped player is not something you look at, and a stopped player is not
-                    // something you play from here: the island keeps nothing but a button, which is
-                    // what hands the screen back to the music instead of leaving a statue behind.
-                    DesktopIslandDoorbell(onClick = { DesktopIslandState.onOpenNowPlaying?.invoke() })
-                } else {
-                    DesktopIslandCard(
+                DesktopIslandCard(
                         song = song,
                         lines = lines,
                         positionMs = { DesktopIslandState.currentPositionMs.value },
@@ -316,7 +313,6 @@ internal fun DesktopIslandWindow() {
                         onNext = { DesktopIslandState.onNext?.invoke() },
                         onPrevious = { DesktopIslandState.onPrevious?.invoke() },
                         onToggleRepeat = { DesktopIslandState.onToggleRepeat?.invoke() },
-                        onOpenNowPlaying = { DesktopIslandState.onOpenNowPlaying?.invoke() },
                         // Click-through hands every press to the window underneath, so a scrub bar
                         // there would only take space and promise something it cannot do.
                         onSeek = if (clickThrough) null else DesktopIslandState.onSeek,
@@ -326,7 +322,6 @@ internal fun DesktopIslandWindow() {
                             DynamicIslandMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false })
                         },
                     )
-                }
             }
         }
     }
@@ -380,8 +375,5 @@ private fun workAreaInDp(density: Float): IslandScreen? {
     )
 }
 
-/** Slack around the capsule inside its window, so the drop shadow has somewhere to land. */
-private const val ISLAND_WINDOW_PADDING = 14f
-
-/** How often the pointer's place on the screen is read. */
-private const val POINTER_POLL_MS = 16L
+/** How often the pointer's place on the screen is read: 25 Hz is enough for a hover. */
+private const val POINTER_POLL_MS = 40L

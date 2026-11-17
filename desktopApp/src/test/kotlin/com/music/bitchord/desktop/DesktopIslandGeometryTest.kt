@@ -23,7 +23,7 @@ class DesktopIslandGeometryTest {
     fun `the capsule rests at the top centre of the screen`() {
         val rest = islandRestRect(screen, collapsedWidth, collapsedHeight)
         assertEquals((1920f - collapsedWidth) / 2f, rest.left, 0.01f)
-        assertEquals(screen.top + ISLAND_SCREEN_MARGIN, rest.top, 0.01f)
+        assertEquals(screen.top, rest.top, 0.01f)
         assertEquals(collapsedWidth, rest.width, 0.01f)
     }
 
@@ -40,9 +40,9 @@ class DesktopIslandGeometryTest {
     }
 
     @Test
-    fun `the capsule keeps a hand's width from the screen edge`() {
+    fun `the capsule touches the top edge with no gap`() {
         val rest = islandRestRect(screen, collapsedWidth, collapsedHeight)
-        assertEquals(ISLAND_SCREEN_MARGIN, rest.top, 0.01f)
+        assertEquals(screen.top, rest.top, 0.01f)
         assertTrue(rest.left > screen.left, "the capsule should not touch the left edge")
         assertTrue(rest.right < screen.right, "the capsule should not touch the right edge")
     }
