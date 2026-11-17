@@ -74,8 +74,8 @@ import com.music.bitchord.ui.icons.BitChordIcons
  * ways of asking "how much of the song is showing". A Dynamic Island has one shape that changes
  * with what is happening to it, and so does this one.
  */
-internal const val ISLAND_COLLAPSED_WIDTH = 380f
-internal const val ISLAND_COLLAPSED_HEIGHT = 80f
+internal const val ISLAND_COLLAPSED_WIDTH = 340f
+internal const val ISLAND_COLLAPSED_HEIGHT = 72f
 internal const val ISLAND_EXPANDED_WIDTH = 560f
 internal const val ISLAND_EXPANDED_HEIGHT = 96f
 
@@ -428,14 +428,14 @@ private fun CollapsedIslandFace(
     Row(
         Modifier
             .fillMaxSize()
-            .padding(start = 10.dp, end = 12.dp),
+            .padding(start = 10.dp, end = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         when {
             song == null -> Box(
                 Modifier
-                    .size(46.dp)
+                    .size(40.dp)
                     .clip(RectangleShape)
                     .background(Color.White.copy(alpha = 0.08f)),
                 contentAlignment = Alignment.Center,
@@ -444,13 +444,13 @@ private fun CollapsedIslandFace(
                     BitChordIcons.MusicNote,
                     null,
                     tint = Color.White.copy(alpha = 0.70f),
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(18.dp),
                 )
             }
             else -> DesktopArtwork(
                 url = song.thumbnailUrl,
                 modifier = Modifier
-                    .size(46.dp)
+                    .size(40.dp)
                     .clip(RectangleShape)
                     .background(Color(0xFF222226)),
                 contentDescription = "Cover",
