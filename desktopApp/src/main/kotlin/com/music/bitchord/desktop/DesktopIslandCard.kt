@@ -75,7 +75,7 @@ import com.music.bitchord.ui.icons.BitChordIcons
  * with what is happening to it, and so does this one.
  */
 internal const val ISLAND_COLLAPSED_WIDTH = 380f
-internal const val ISLAND_COLLAPSED_HEIGHT = 56f
+internal const val ISLAND_COLLAPSED_HEIGHT = 80f
 internal const val ISLAND_EXPANDED_WIDTH = 560f
 internal const val ISLAND_EXPANDED_HEIGHT = 96f
 
@@ -416,21 +416,26 @@ private fun ExpandedIslandFace(
 }
 
 /**
- * The resting pill: just the lyric being sung, centred in the capsule, with the cover dropped
- * lower on the left. No title or artist — the island reads as a karaoke line at a glance.
+ * The resting pill: the cover on the left, vertically centred, and the same three rolling lyric
+ * lines the hovered face shows — context line, line being sung, next line. No title, no artist,
+ * no controls; the island reads as a karaoke line at a glance.
  */
 @Composable
 private fun CollapsedIslandFace(
     song: Song?,
     now: IslandLines,
 ) {
-    Box(Modifier.fillMaxSize()) {
+    Row(
+        Modifier
+            .fillMaxSize()
+            .padding(start = 10.dp, end = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         when {
             song == null -> Box(
                 Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 8.dp, top = 12.dp)
-                    .size(34.dp)
+                    .size(46.dp)
                     .clip(RectangleShape)
                     .background(Color.White.copy(alpha = 0.08f)),
                 contentAlignment = Alignment.Center,
@@ -439,15 +444,13 @@ private fun CollapsedIslandFace(
                     BitChordIcons.MusicNote,
                     null,
                     tint = Color.White.copy(alpha = 0.70f),
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(20.dp),
                 )
             }
             else -> DesktopArtwork(
                 url = song.thumbnailUrl,
                 modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 8.dp, top = 12.dp)
-                    .size(34.dp)
+                    .size(46.dp)
                     .clip(RectangleShape)
                     .background(Color(0xFF222226)),
                 contentDescription = "Cover",
@@ -455,26 +458,28 @@ private fun CollapsedIslandFace(
             )
         }
 
-        // The line being sung, centred across the whole capsule; nothing else is drawn here.
-        AnimatedContent(
-            targetState = now.activeIndex,
-            transitionSpec = {
-                (slideInVertically(animationSpec = tween(LYRIC_ROLL_MS)) { it } +
-                    fadeIn(tween(LYRIC_ROLL_MS))).togetherWith(
-                    slideOutVertically(animationSpec = tween(LYRIC_ROLL_MS)) { -it } +
-                        fadeOut(tween(LYRIC_ROLL_MS)),
-                )
-            },
-            modifier = Modifier
-                .align(Alignment.Center)
-                .padding(horizontal = 40.dp),
-            label = "islandLineCollapsed",
-        ) { index ->
-            IslandLine(
-                text = now.lineAt(index) ?: "♪",
-                fontSize = 12.sp,
-                active = true,
-            )
+        // The three-line lyric block, identical in shape to the hovered face's. Keyed on the song
+        // so a track change rolls in with that song's own lines.
+        key(song?.videoId) {
+            AnimatedContent(
+                targetState = now.activeIndex,
+                transitionSpec = {
+                    (slideInVertically(animationSpec = tween(LYRIC_ROLL_MS)) { it / 3 } +
+                        fadeIn(tween(LYRIC_ROLL_MS))).togetherWith(
+                        slideOutVertically(animationSpec = tween(LYRIC_ROLL_MS)) { -it / 3 } +
+                            fadeOut(tween(LYRIC_ROLL_MS)),
+                    )
+                },
+                modifier = Modifier.weight(1f),
+                label = "islandLinesCollapsed",
+            ) { index ->
+                val at = now.at(index)
+                Column(Modifier.fillMaxWidth()) {
+                    IslandLine(text = at.previous, fontSize = 9.sp, active = false)
+                    IslandLine(text = at.current, fontSize = 12.sp, active = true)
+                    IslandLine(text = at.next, fontSize = 9.sp, active = false)
+                }
+            }
         }
     }
 }
