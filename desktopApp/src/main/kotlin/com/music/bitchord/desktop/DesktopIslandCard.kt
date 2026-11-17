@@ -178,6 +178,8 @@ internal fun DesktopIslandCard(
     repeatMode: DesktopRepeatMode,
     scale: Float,
     hovered: Boolean,
+    /** The window's own morph, 0 at rest and 1 open — the only source of truth for which face to draw. */
+    expansion: Float,
     interactive: Boolean,
     onPlayPause: () -> Unit = {},
     onNext: () -> Unit = {},
@@ -228,11 +230,9 @@ internal fun DesktopIslandCard(
                 shape = RectangleShape,
             ),
     ) {
-        // One face at a time. Both used to be composed with crossfading alpha, so during a morph
-        // the expanded cover/title sat on top of the collapsed cover/title — the duplicate the
-        // eye caught even though there was only one window. The window itself supplies the morph;
-        // the content simply switches at its midpoint.
-        val expandedFace = measured.floatValue >= 0.5f
+        // Switch on the same expansion that sized the window. Measuring the box here disagreed
+        // with AWT's bounds on scaled displays, so the open face was drawn inside a closed frame.
+        val expandedFace = expansion >= 0.5f
         if (expandedFace) {
             Box(
                 Modifier

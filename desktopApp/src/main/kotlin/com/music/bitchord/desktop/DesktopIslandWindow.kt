@@ -308,6 +308,7 @@ internal fun DesktopIslandWindow() {
                         repeatMode = repeatMode,
                         scale = scale,
                         hovered = hovered.value,
+                        expansion = expansion.floatValue,
                         interactive = true,
                         onPlayPause = { DesktopIslandState.onPlayPause?.invoke() },
                         onNext = { DesktopIslandState.onNext?.invoke() },
