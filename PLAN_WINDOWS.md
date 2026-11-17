@@ -1,7 +1,7 @@
-# Blueprint & Rencana Eksekusi: BitChord Desktop (Windows + Linux) & Floating Desktop Lyrics
+# Blueprint & Rencana Eksekusi: Lirika Desktop (Windows + Linux) & Floating Desktop Lyrics
 
 Dokumen ini adalah rencana acuan utama (*single source of truth*) untuk membangun, menyesuaikan, dan
-memodernisasi klien musik BitChord untuk desktop. Fokus awalnya adalah **Windows 11**: mengembalikan
+memodernisasi klien musik Lirika untuk desktop. Fokus awalnya adalah **Windows 11**: mengembalikan
 versi desktop, membuang elemen antarmuka macOS, mengintegrasikan kontrol jendela native Windows 11,
 dan menambahkan fitur **Floating Desktop Lyrics (Lirik Mengambang / Dynamic Island)** yang ramah
 produktivitas (*multitasking-friendly*). Sejak Fase 7 target resminya adalah **Windows + Linux** —
@@ -12,7 +12,7 @@ terkompilasi oleh CI — dan iOS/Android/macOS tidak masuk daftar.
 
 ## 1. Analisis Masalah & Kebutuhan Utama
 
-Berdasarkan pengujian pada versi desktop BitChord saat ini:
+Berdasarkan pengujian pada versi desktop Lirika saat ini:
 1. **Antarmuka Bergaya macOS (Kurang Cocok di Windows):**
    - Jendela aplikasi masih menggambar tombol kontrol jendela *traffic light* khas Mac (merah, kuning, hijau) di pojok kiri atas via `MacCaptionButton`.
    - Tidak ada integrasi tombol kontrol Windows 11 (Minimize, Maximize/Restore, Close) di pojok kanan atas.
@@ -29,7 +29,7 @@ Berdasarkan pengujian pada versi desktop BitChord saat ini:
 
 ### A. Runtime & Toolchain: Mengapa Wajib JDK 21?
 * **Java Development Kit (JDK 21):**
-  - Modul desktop BitChord (`desktopApp/build.gradle.kts`) secara eksplisit mengunci target toolchain ke Java 21:
+  - Modul desktop Lirika (`desktopApp/build.gradle.kts`) secara eksplisit mengunci target toolchain ke Java 21:
     ```kotlin
     kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_21) } }
     java { toolchain { languageVersion.set(JavaLanguageVersion.of(21)) } }
@@ -48,7 +48,7 @@ Berdasarkan pengujian pada versi desktop BitChord saat ini:
 
 ## 3. Penanganan Autentikasi YouTube Music di Desktop
 
-BitChord di desktop telah memiliki dua mesin penangkap autentikasi yang sangat andal di dalam kode sumbernya:
+Lirika di desktop telah memiliki dua mesin penangkap autentikasi yang sangat andal di dalam kode sumbernya:
 
 ```
 [Pengguna di Windows]
@@ -199,8 +199,8 @@ flowchart TD
 - [x] Label island sudah diterjemahkan: 48 kunci `d_island_*` ada di `desktop-en.xml` **dan**
   `desktop-id.xml`, dan uji katalog memastikan tidak ada kunci desktop yang hilang di bahasa lain.
 - [x] Kemasan Windows terverifikasi di mesin ini: `packageMsi` menghasilkan
-  `desktopApp/build/compose/binaries/main/msi/BitChord-1.8.29.msi` (222 MB) dan `createDistributable`
-  menghasilkan image aplikasi 312 MB. `BitChord.exe` dari image itu dijalankan dan menyala penuh:
+  `desktopApp/build/compose/binaries/main/msi/Lirika-1.8.29.msi` (222 MB) dan `createDistributable`
+  menghasilkan image aplikasi 312 MB. `Lirika.exe` dari image itu dijalankan dan menyala penuh:
   pustaka termuat, InnerTubeX hangat dalam 12,3 detik, dan PoToken tercetak lewat WebView — artinya
   runtime jlink hasil pangkasan (tanpa `java.scripting`/`jdk.dynalink`) cukup untuk aplikasi asli,
   bukan hanya mode dev.
@@ -269,10 +269,10 @@ tidak ada fitur yang memang tidak pernah bisa aktif di mesin ini. Yang dibuang b
   resource; `packageMsi` (222 MB) dan `createDistributable` (image 312 MB) hijau. Ukuran portable `lib/`:
   **310 MB → 191 MB → 165,13 MB (−47 %)** (setelah pemangkasan native asing `stripForeignNatives` dan
   pencopotan 11,4 MB font Apple SF Pro). `bitchord-app.jar` menyusut dari **11,22 MB ke 3,67 MB**.
-- `BitChord.exe` dari image kemasan **dijalankan sungguhan**: sesi YouTube pulih, pustaka termuat
+- `Lirika.exe` dari image kemasan **dijalankan sungguhan**: sesi YouTube pulih, pustaka termuat
   (14 liked / 3 playlist / Podcasts=1), PoToken tercetak lewat WebView, InnerTubeX hangat 12,3 detik.
-- `BitChord-1.8.31.exe` (233 MB), `BitChord-1.8.31.msi` (232 MB) dan
-  `BitChord-1.8.31-windows-portable.zip` (193 MB) dihasilkan dari build nyata dengan override
+- `Lirika-1.8.31.exe` (233 MB), `Lirika-1.8.31.msi` (232 MB) dan
+  `Lirika-1.8.31-windows-portable.zip` (193 MB) dihasilkan dari build nyata dengan override
   `-Pbitchord.version=1.8.31 -Pbitchord.build=31`, termasuk task `windowsPortable` yang bentuk zip-nya
   belum pernah jalan sebelumnya; `buildSmtcNative` + `buildWindowNative` ikut terkompilasi.
 - Langkah-langkah `release.yml` diuji di sini (workflow-nya sendiri belum jalan di GitHub — lihat bawah):
@@ -319,8 +319,8 @@ git push origin v1.8.32          # push tag = publish; tag tidak akan dibangun k
 Aturan namanya: **tag dikurangi `v` di depan = versi aplikasi**, dan angka patch-nya sekalian jadi
 *version code* desktop (`desktopVersionCode` di `desktopApp/build.gradle.kts`, sekarang bisa
 di-override dengan `-Pbitchord.build`), jadi paket Windows dinamai mengikuti tag: `-Pbitchord.version=1.8.31
--Pbitchord.build=31` menghasilkan `BitChord-1.8.31.msi` dan `BitChord-1.8.31.exe` (dibuktikan di mesin ini),
-plus `BitChord-1.8.31-windows-portable.zip`. Tag dua angka (`v1.9`) memakai version code bawaan (29) supaya
+-Pbitchord.build=31` menghasilkan `Lirika-1.8.31.msi` dan `Lirika-1.8.31.exe` (dibuktikan di mesin ini),
+plus `Lirika-1.8.31-windows-portable.zip`. Tag dua angka (`v1.9`) memakai version code bawaan (29) supaya
 installer yang sudah terpasang tetap mengenali upgrade. Berkas `.deb`/`.rpm` dinamai oleh Compose sendiri —
 workflow menyalin seluruh folder `main/deb` dan `main/rpm`, jadi tidak ada nama yang ditebak di YAML.
 
@@ -356,7 +356,7 @@ baca catatan rilisnya, lalu publish atau buang draft-nya.
 
 - [ ] RAM dan CPU selama 10 menit playback: idle, seek, dan island aktif. Alat: `Get-Counter`/Task Manager
   (Windows), `pidstat` (Linux). Angka ditulis di dokumen ini, bukan di commit saja.
-- [ ] Cold start `BitChord.exe` → jendela pertama. Yang ada sekarang baru angka hangat (InnerTubeX 12,3 s).
+- [ ] Cold start `Lirika.exe` → jendela pertama. Yang ada sekarang baru angka hangat (InnerTubeX 12,3 s).
 
 **P4 — Sisa yang dijanjikan tapi belum dibuat**
 
@@ -387,7 +387,7 @@ baca catatan rilisnya, lalu publish atau buang draft-nya.
   memutarnya — lewat `DesktopFloatingLyricsManager.onPlayQueueIndex` yang di-wire ke `playQueueIndex()`
   di `DesktopApp.kt`, jalur yang sama dengan ketukan baris di queue sheet. Karena antreannya antrean
   YouTube Music (radio, playlist, autoplay ikut), lagu YT Music bisa distart dari kapsul tanpa menyentuh
-  jendela utama. Ditambah aksi **"Open BitChord…"** yang memunculkan lagi jendela yang disembunyikan
+  jendela utama. Ditambah aksi **"Open Lirika…"** yang memunculkan lagi jendela yang disembunyikan
   (`DesktopWindowVisibility.show()`) lalu membuka Now Playing. Kunci string: `d_island_up_next`,
   `d_island_up_next_more`, `d_island_open_app` (en + id).
   - State antrean: `DesktopFloatingLyricsManager.queueSongs` / `queueIndex`, diberi makan oleh
@@ -434,7 +434,7 @@ baca catatan rilisnya, lalu publish atau buang draft-nya.
 
 **Fase 9 — Rombak "YouTube Music × Dynamic Island" (selesai, 31 Oktober 2026)**
 
-Arah yang dipilih lewat pertanyaan desain: **"YT Music + identitas BitChord"** — dasar gelap hangat
+Arah yang dipilih lewat pertanyaan desain: **"YT Music + identitas Lirika"** — dasar gelap hangat
 ("Night Stage"), aksen coral hanya untuk status live, kaca yang mewarisi warna artwork, dan Dynamic
 Island sebagai pemain utama. Cakupannya menyeluruh (shell, Home/Explore/Library/Search, Now Playing,
 dan island); Settings hanya dirapikan memakai token yang sama. Pembersihan dibatasi pada **kode/config
@@ -454,7 +454,7 @@ disentuh.
     dan `ensureVisitorData`/`capture` di `DesktopYouTubeSession.kt`.
   - Verifikasi: tiga modul kompilasi bersih; `:desktopApp:test` tetap **314 test hijau**.
 
-- [x] **Fase 1 — design system "Night Stage"** (`desktopUi/.../ui/theme/BitChordTheme.kt`).
+- [x] **Fase 1 — design system "Night Stage"** (`desktopUi/.../ui/theme/LirikaTheme.kt`).
   - Token `BcColors` (canvas `#0E0C10`, surface `#171419`, raised `#221E25`, coral live `#FF5A4E`,
     hairline putih tipis), `BcShapes`, `BcSpacing`, `BcType` (system sans, tanpa file font), `BcMotion`
     (hover 120 ms / standar 180 ms / sheet 280 ms), dan `LocalBcTint` untuk warna artwork.
@@ -526,7 +526,7 @@ disentuh.
   - `:shared:compileKotlinJvm :desktopUi:compileKotlinJvm :desktopApp:compileKotlin` hijau.
   - `:desktopApp:test` 314 test hijau.
   - `-Pbitchord.target=linux :desktopApp:compileKotlin` hijau.
-  - `:desktopApp:createDistributable` sukses; `app/BitChord/BitChord.exe` dijalankan: sesi YouTube
+  - `:desktopApp:createDistributable` sukses; `app/Lirika/Lirika.exe` dijalankan: sesi YouTube
     Music dipulihkan, home/library/browse termuat, proses stabil, lalu ditutup.
 
 - **Belum diverifikasi — jangan diklaim hijau:**

@@ -15,7 +15,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "BitChord"
+rootProject.name = "Lirika"
 include(":shared")
 include(":sharedUi")
 include(":desktopUi")

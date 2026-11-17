@@ -1,6 +1,6 @@
 # Additional Documentation
 
-Additional BitChord project and development information will be maintained here.
+Additional Lirika project and development information will be maintained here.
 
 ## Project
 - [Desktop blueprint & roadmap](PLAN_WINDOWS.md): what this fork targets (Windows + Linux), the native

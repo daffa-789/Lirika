@@ -7,7 +7,7 @@ name: Release
 # Requires the RELEASE_TOKEN secret (a fine-grained PAT with Contents: read+write on this repo): the
 # publish step cannot use GITHUB_TOKEN, because GitHub blocks the Releases API for forks.
 #
-# The token in place today ("BitChord Release Token") expires on 10 November 2027. When it does, the
+# The token in place today ("Lirika Release Token") expires on 10 November 2027. When it does, the
 # Publish step fails with a permission error that does not name the token, so rotate it before then:
 # make a new fine-grained PAT scoped to this repository with Contents: read+write, replace the
 # secret, and only then delete the old one. A token without an expiry date would remove the chore
@@ -205,7 +205,7 @@ jobs:
           mkdir -p dist
           cp desktopApp/build/compose/binaries/main/msi/* dist/
           cp desktopApp/build/compose/binaries/main/exe/* dist/
-          cp desktopApp/build/distributions/BitChord-*-windows-portable.zip dist/
+          cp desktopApp/build/distributions/Lirika-*-windows-portable.zip dist/
           ls -l dist
 
       # The manifest uses sha256sum's own format ("<hash>  <name>") and LF endings, so `sha256sum -c`
@@ -287,15 +287,15 @@ jobs:
           VERSION: ${{ needs.meta.outputs.version }}
         run: |
           set -euo pipefail
-          APP_IMAGE=desktopApp/build/compose/binaries/main/app/BitChord
-          if [ ! -x "$APP_IMAGE/bin/BitChord" ]; then
+          APP_IMAGE=desktopApp/build/compose/binaries/main/app/Lirika
+          if [ ! -x "$APP_IMAGE/bin/Lirika" ]; then
             echo "::error::no app image at $APP_IMAGE - the AppImage will be missing from this release"
             exit 0
           fi
           mkdir -p dist
           desktopApp/packaging/appimage.sh \
-            "$APP_IMAGE" "dist/BitChord-${VERSION}-x86_64.AppImage" ./appimagetool
-          if [ ! -s "dist/BitChord-${VERSION}-x86_64.AppImage" ]; then
+            "$APP_IMAGE" "dist/Lirika-${VERSION}-x86_64.AppImage" ./appimagetool
+          if [ ! -s "dist/Lirika-${VERSION}-x86_64.AppImage" ]; then
             echo "::error::the AppImage was not produced - the release will ship without it"
             exit 0
           fi
@@ -463,7 +463,7 @@ jobs:
           set -euo pipefail
           cd dist
           {
-            echo "BitChord ${VERSION}: Multiplatform release for Android, Windows, and Linux. Built by this workflow run from \`${COMMIT:0:10}\`."
+            echo "Lirika ${VERSION}: Multiplatform release for Android, Windows, and Linux. Built by this workflow run from \`${COMMIT:0:10}\`."
             echo
             if [ "$PRERELEASE" = "true" ]; then
               echo "> [!NOTE]"
@@ -486,8 +486,8 @@ jobs:
               echo '  **These APKs are unsigned**: Android will refuse to install them. They exist so CI'
               echo '  proves the build; add the `KEYSTORE_BASE64` secret to get an installable, signed APK.'
             fi
-            echo '- **Windows** — `BitChord-*.msi` for a per-user installer (no admin needed);'
-            echo '  `BitChord-*.exe` is the same installer as a single file; `*-windows-portable.zip`'
+            echo '- **Windows** — `Lirika-*.msi` for a per-user installer (no admin needed);'
+            echo '  `Lirika-*.exe` is the same installer as a single file; `*-windows-portable.zip`'
             echo '  installs nothing but expects a Java 21+ runtime on `PATH` or in `JAVA_HOME`.'
             echo '- **Linux** — `*.deb` for Debian/Ubuntu/SteamOS, `*.rpm` for Fedora/openSUSE/RHEL,'
             echo '  and `*.AppImage` to run straight from the file without installing anything.'
@@ -526,7 +526,7 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN }}
           tag_name: ${{ needs.meta.outputs.tag }}
           target_commitish: ${{ needs.meta.outputs.sha }}
-          name: BitChord ${{ needs.meta.outputs.version }}
+          name: Lirika ${{ needs.meta.outputs.version }}
           body_path: /tmp/RELEASE_NOTES.md
           files: dist/*
           draft: ${{ inputs.as_draft == true }}

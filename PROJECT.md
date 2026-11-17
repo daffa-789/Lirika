@@ -1,7 +1,7 @@
-# Project: BitChord Kotlin Multiplatform Setup (Android + Desktop)
+# Project: Lirika Kotlin Multiplatform Setup (Android + Desktop)
 
 ## Architecture
-BitChord is a Kotlin Multiplatform (KMP) music streaming and playback application.
+Lirika is a Kotlin Multiplatform (KMP) music streaming and playback application.
 - **`:shared`**: Core multiplatform business logic and models.
   - `commonMain`: 100% pure Kotlin standard library and DSP math (Models, EqualizerCurve, PeakLimiter, TransitionPlanner). Targets all platforms.
   - `jvmSharedMain`: Shared JVM code for Desktop and Android (YouTube parsing, InnerTubeX, NewPipeExtractor, lyrics, OkHttp, Jsoup).
@@ -15,7 +15,7 @@ BitChord is a Kotlin Multiplatform (KMP) music streaming and playback applicatio
 ## Feature Inventory
 | # | Feature | Description | Milestone | Source |
 |---|---------|-------------|-----------|--------|
-| 1 | Multiplatform `:shared` Targets | Configure `androidTarget()` and iOS targets (`iosX64`, `iosArm64`, `iosSimulatorArm64`) with `BitChordShared` XCFramework export in `shared/build.gradle.kts`. **iOS later cut** — the targets and the XCFramework export are gone; `:shared` is Android + JVM. | M1 | Survey (Explorer 2) |
+| 1 | Multiplatform `:shared` Targets | Configure `androidTarget()` and iOS targets (`iosX64`, `iosArm64`, `iosSimulatorArm64`) with `LirikaShared` XCFramework export in `shared/build.gradle.kts`. **iOS later cut** — the targets and the XCFramework export are gone; `:shared` is Android + JVM. | M1 | Survey (Explorer 2) |
 | 2 | Ktor Multiplatform Client Setup | Keep pure common networking in `commonMain` with `ktor-client-core` and platform engines (`okhttp` for JVM/Android, `darwin` for iOS, `cio` for desktop). | M1 | Survey (Explorer 2) |
 | 3 | Root Build & Settings Setup | Add R8 classpath (`8.13.23`), declare AGP 8.10.1 plugins, add version extra properties, update `gradle.properties`, and configure SDK detection in `settings.gradle.kts`. | M1 | Survey (Explorer 1) |
 | 4 | Restore Historical `:app` Module | Restore `:app` from commit `8b1a112a` without overwriting existing working tree changes. | M1 | Survey (Explorer 1) |
@@ -44,7 +44,7 @@ BitChord is a Kotlin Multiplatform (KMP) music streaming and playback applicatio
 - `implementation(project(":sharedUi"))`
 - Package: `com.music.bitchord.ui.player.NowPlayingScreen`
 - Package: `com.music.bitchord.ui.components.SearchField`
-- Package: `com.music.bitchord.ui.icons.BitChordIcons`
+- Package: `com.music.bitchord.ui.icons.LirikaIcons`
 - Package: `com.music.bitchord.sharedui.resources.Res`
 
 ### `:desktopApp` ↔ `:shared`

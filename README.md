@@ -3,11 +3,13 @@
 <br/>
 <br/>
 
-<img src="Logo.png" alt="BitChord app icon" width="200" />
+<img src="Logo.png" alt="Lirika app icon" width="200" />
 
-# BitChord
+# Lirika
 
 ### Aesthetic YouTube Music Client
+
+**An independent fork of [BitChord](https://github.com/kushagrasinghx/BitChord), modified by Daffa (daffa-789) on 2026-11-17.**
 
 **Desktop on Windows and Linux, and the Android app — all built from this one tree.** [What this fork changes](#this-fork).
 
@@ -21,19 +23,17 @@
 
 <br/>
 
-<a href="https://trendshift.io/repositories/177639?utm_source=trendshift-badge&utm_medium=badge&utm_campaign=badge-trendshift-177639" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/177639/daily?language=Kotlin" alt="kushagrasinghx%2FBitChord | Trendshift" width="250" height="55"/></a>
-<a href="https://trendshift.io/repositories/177639?utm_source=trendshift-badge&utm_medium=badge&utm_campaign=badge-trendshift-177639" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/177639/weekly?language=Kotlin" alt="kushagrasinghx%2FBitChord | Trendshift" width="250" height="55"/></a>
 
 </div>
 
 > [!IMPORTANT]
-> BitChord is not affiliated with, endorsed by, or connected to YouTube or Google in any way. Use it at your own discretion.
+> Lirika is not affiliated with, endorsed by, or connected to YouTube or Google in any way. Use it at your own discretion.
 
 ---
 
 <div align="center">
 
-<img src="Banner.png" alt="BitChord banner" width="100%" />
+<img src="Banner.png" alt="Lirika banner" width="100%" />
 
 <h1><a id="features"></a>Features</h1>
 
@@ -112,7 +112,7 @@ Island lyrics, SMTC media keys) and on Linux (MPRIS media controls and the Statu
 Installers for **this** fork appear on the Releases page of this repository, published by the
 `Release` workflow whenever a `v*` tag is pushed — each release carries a `SHA256SUMS.txt` manifest
 next to the files. Prebuilt APKs of the upstream project live in the
-[Releases](https://github.com/kushagrasinghx/BitChord/releases) page; building from source is one
+[Releases](https://github.com/daffa-789/Lirika/releases) page; building from source is one
 clone away:
 
 ```bash
@@ -128,7 +128,7 @@ clone away:
 ./gradlew :desktopApp:packageDeb
 ./gradlew :desktopApp:packageRpm
 # the AppImage is the one format Gradle cannot make; the script wraps the app image
-desktopApp/packaging/appimage.sh desktopApp/build/compose/binaries/main/app/BitChord dist/BitChord.AppImage
+desktopApp/packaging/appimage.sh desktopApp/build/compose/binaries/main/app/Lirika dist/Lirika.AppImage
 
 # Android (needs an Android SDK: local.properties sdk.dir, or ANDROID_HOME)
 ./gradlew :app:assembleDebug               # the dev+prod flavours, 3 ABIs + universal
@@ -146,8 +146,8 @@ What release `v1.8.32` actually published, for reference:
 
 | Output | Size |
 | --- | --- |
-| `BitChord-1.8.32.msi` / `.exe` | 198 MB each |
-| `BitChord-1.8.32-windows-portable.zip` | 160 MB |
+| `Lirika-1.8.32.msi` / `.exe` | 198 MB each |
+| `Lirika-1.8.32-windows-portable.zip` | 160 MB |
 | `bitchord_1.8.32_amd64.deb` / `bitchord-1.8.32-1.x86_64.rpm` | 189 MB each |
 | `app-prod-{arm64-v8a, armeabi-v7a, x86_64, universal}-release.apk` | 63 / 53 / 69 / 161 MB |
 
@@ -213,7 +213,7 @@ tree builds both.
 
 - Windows Fluent caption and DWM backdrop (`bitchord_window.dll`), SMTC media keys (`bitchord_smtc.dll`), both built with CMake + Ninja + MinGW when present.
 - Dynamic Island lyrics overlay, its settings page, and a tray entry that toggles it on both platforms.
-- A YouTube Music-inspired shell around BitChord's own dark token set: a persistent player dock with
+- A YouTube Music-inspired shell around Lirika's own dark token set: a persistent player dock with
   hover-expanded seek, volume and audio-output controls; restyled Home, Explore, Library and Search;
   a landscape Now Playing; and the island as the out-of-window player.
 - `javafx-media` named as a dependency of its own, with the platform classifier. It used to arrive
@@ -229,7 +229,7 @@ tree builds both.
 
 **Measured effect** — the portable `lib/` went from 310 MB to 191 MB (−38 %), the string catalogues
 from 152 KB to 72 KB after deleting the keys nothing referenced, and `:desktopApp:test` runs 323
-tests green. The packaged `BitChord.exe` was launched on this machine to prove the trimmed jlink
+tests green. The packaged `Lirika.exe` was launched on this machine to prove the trimmed jlink
 runtime is enough for the real app, not just for `:desktopApp:run`.
 
 The working plan, phase by phase, is in [PLAN_WINDOWS.md](PLAN_WINDOWS.md).
@@ -240,14 +240,14 @@ The working plan, phase by phase, is in [PLAN_WINDOWS.md](PLAN_WINDOWS.md).
 
 <h1><a id="contributing"></a>Contributing</h1>
 
-We welcome contributions to BitChord! Please review our [Contributing Guide](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) before submitting a Pull Request.
+We welcome contributions to Lirika! Please review our [Contributing Guide](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) before submitting a Pull Request.
 
 [**Contributing Guide**](CONTRIBUTING.md) · [**Code of Conduct**](CODE_OF_CONDUCT.md) · [**Maintainers**](MAINTAINERS.md) · [**Additional Docs**](ADDITIONAL.md)
 
 ### Thanks to all contributors ❤
 
-<a href="https://github.com/kushagrasinghx/BitChord/graphs/contributors">
-  <img src="https://raw.githubusercontent.com/kushagrasinghx/BitChord/contributors/contributors.svg" />
+<a href="https://github.com/daffa-789/Lirika/graphs/contributors">
+  <img src="https://raw.githubusercontent.com/daffa-789/Lirika/contributors/contributors.svg" />
 </a>
 
 </div>
@@ -258,10 +258,9 @@ We welcome contributions to BitChord! Please review our [Contributing Guide](CON
 
 <h1><a id="support"></a>Support</h1>
 
-BitChord is free and always will be — if it's earned a spot in your rotation, you can chip in here:
-
-<a href="https://ko-fi.com/kushagrasinghx" target="_blank" rel="noopener noreferrer"><img src="https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/donate/kofi-singular-alt/cozy.svg" alt="Support me on Ko-fi" height="55"/></a>
-<a href="https://paypal.me/kuxhagrasingh" target="_blank" rel="noopener noreferrer"><img src="https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/donate/paypal-plural/cozy.svg" alt="Support us on PayPal" height="55"/></a>
+Lirika is free and always will be. The original this fork came from is by
+[kushagrasinghx](https://github.com/kushagrasinghx) — see their README for their
+support links if you want to support the upstream work.
 
 </div>
 
@@ -271,12 +270,12 @@ BitChord is free and always will be — if it's earned a spot in your rotation, 
 
 <h1><a id="disclaimer"></a>Disclaimer & Legal Notice</h1>
 
-BitChord is an independent, community-driven third-party audio player and client. It is **not** associated with Google LLC, YouTube Music, Deezer, Telegram, or any of their parent companies.
+Lirika is an independent, community-driven third-party audio player and client. It is **not** associated with Google LLC, YouTube Music, Deezer, Telegram, or any of their parent companies.
 
-* **No Media Hosting:** BitChord does not host, upload, or store copyrighted music files. It operates strictly as an interface to scan local device storage or stream media directly from public, public-facing, or user-authenticated APIs.
+* **No Media Hosting:** Lirika does not host, upload, or store copyrighted music files. It operates strictly as an interface to scan local device storage or stream media directly from public, public-facing, or user-authenticated APIs.
 * **Fair Use & API Usage:** This software is created solely for personal research, educational, and fair-use purposes. The user is entirely responsible for ensuring their usage aligns with their local copyright laws and YouTube Terms of Service.
-* **No Ad-Blocking Guarantee:** While BitChord focuses on providing a clean listening environment, it does not guarantee permanent bypasses or modifications to commercial third-party platform conditions.
-* **Copyleft:** BitChord is free software under the GPLv3. The license does not let anyone forbid others from selling or redistributing copies, but any distribution must come with the Corresponding Source under the same license.
+* **No Ad-Blocking Guarantee:** While Lirika focuses on providing a clean listening environment, it does not guarantee permanent bypasses or modifications to commercial third-party platform conditions.
+* **Copyleft:** Lirika is free software under the GPLv3. The license does not let anyone forbid others from selling or redistributing copies, but any distribution must come with the Corresponding Source under the same license.
 
 </div>
 
@@ -287,5 +286,12 @@ BitChord is an independent, community-driven third-party audio player and client
 <h1><a id="license"></a>License</h1>
 
 This project is licensed under the **GNU General Public License v3.0 (GPLv3)**. See the [LICENSE](LICENSE) file for details.
+
+**Modification notice (GPLv3 §5a):** Lirika is a modified version of
+[BitChord](https://github.com/kushagrasinghx/BitChord) by Kushagra Singh. It was
+forked and modified by Daffa (daffa-789) starting 2026-11-17. The upstream
+copyright notices remain in the source; this fork's changes are distributed
+under the same GPLv3, and source for any binary release is available from this
+repository.
 
 </div>

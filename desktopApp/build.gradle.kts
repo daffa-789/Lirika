@@ -17,7 +17,7 @@ val hostIsLinux = System.getProperty("os.name").contains("Linux", ignoreCase = t
 val targetOs: String = (providers.gradleProperty("bitchord.target").orNull ?: when {
     hostIsWindows -> "windows"
     hostIsLinux -> "linux"
-    else -> error("BitChord desktop ships for Windows and Linux only")
+    else -> error("Lirika desktop ships for Windows and Linux only")
 }).lowercase()
 
 // Windows installer metadata requires MAJOR.MINOR.BUILD even though the app's public version is
@@ -37,7 +37,7 @@ val ffmpegVersion = "7.1.1-$javacppVersion"
 val nativeClassifier = when (targetOs) {
     "windows" -> "windows-x86_64"
     "linux" -> "linux-x86_64"
-    else -> error("BitChord desktop ships for Windows and Linux only")
+    else -> error("Lirika desktop ships for Windows and Linux only")
 }
 private fun localProperty(name: String): String = rootProject.file("local.properties")
     .takeIf { it.isFile }
@@ -647,7 +647,7 @@ val windowsPortableAssemble by tasks.registering {
     group = "distribution"
     description = "Lays out a Windows-runnable folder: application jars, Windows natives, launcher."
     dependsOn(tasks.named("jar"))
-    val stage = windowsPortableDir.map { it.dir("BitChord") }
+    val stage = windowsPortableDir.map { it.dir("Lirika") }
     val appJar = tasks.named<Jar>("jar").flatMap { it.archiveFile }
     val runtime = configurations.named("runtimeClasspath")
     val version = appVersion
@@ -686,11 +686,11 @@ val windowsPortableAssemble by tasks.registering {
 
         // `lib\*` rather than a spelled-out classpath: the wildcard is what keeps this working when
         // a dependency is added, and the JVM is what expands it.
-        File(target, "BitChord.bat").writeText(
+        File(target, "Lirika.bat").writeText(
             buildString {
                 appendLine("@echo off")
                 appendLine("setlocal")
-                appendLine("rem BitChord, portable. Needs a Java 21+ runtime on PATH or in JAVA_HOME.")
+                appendLine("rem Lirika, portable. Needs a Java 21+ runtime on PATH or in JAVA_HOME.")
                 appendLine("set \"HERE=%~dp0\"")
                 appendLine("set \"RUNNER=java\"")
                 appendLine("if defined JAVA_HOME set \"RUNNER=%JAVA_HOME%\\bin\\java\"")
@@ -714,7 +714,7 @@ val windowsPortableAssemble by tasks.registering {
         }
         val problems = buildList {
             if (!holds("com/music/bitchord/desktop/MainKt.class")) {
-                add("the BitChord desktop entry point is missing")
+                add("the Lirika desktop entry point is missing")
             }
             if (!holds("androidx/compose/runtime/Composer.class")) {
                 add("the Compose runtime is missing")
@@ -780,7 +780,7 @@ val windowsPortable by tasks.registering(Zip::class) {
     description = "Zips the portable Windows folder for copying to a Windows machine."
     dependsOn(windowsPortableAssemble)
     from(windowsPortableDir)
-    archiveFileName.set("BitChord-$appVersion-windows-portable.zip")
+    archiveFileName.set("Lirika-$appVersion-windows-portable.zip")
     destinationDirectory.set(layout.buildDirectory.dir("distributions"))
     doLast { logger.lifecycle("windowsPortable: ${archiveFile.get().asFile.absolutePath}") }
 }
@@ -809,11 +809,11 @@ compose.desktop {
                 TargetFormat.Deb,
                 TargetFormat.Rpm,
             )
-            packageName = "BitChord"
+            packageName = "Lirika"
             packageVersion = nativePackageVersion
-            description = "BitChord"
-            vendor = "BitChord contributors"
-            copyright = "Copyright © 2026 BitChord contributors"
+            description = "Lirika - Aesthetic YouTube Music Client"
+            vendor = "Lirika contributors"
+            copyright = "Copyright © 2026 Lirika contributors"
 
             modules(
                 "java.base",
@@ -848,7 +848,7 @@ compose.desktop {
             windows {
                 iconFile.set(project.file("packaging/icons/AppIcon.ico"))
                 upgradeUuid = "8f3c1d24-6a2b-4f5e-9c17-2b8d54e0a913"
-                menuGroup = "BitChord"
+                menuGroup = "Lirika"
                 shortcut = true
                 dirChooser = false
                 perUserInstall = true
@@ -856,4 +856,12 @@ compose.desktop {
         }
     }
 
+}
+
+// Pin the generated Res package. Compose derives it from the root project name by default, so
+// renaming the root project (BitChord -> Lirika) silently moved `Res` out from under every import.
+compose.resources {
+    publicResClass = true
+    packageOfResClass = "bitchord.desktopapp.generated.resources"
+    generateResClass = always
 }

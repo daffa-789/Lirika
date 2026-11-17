@@ -51,7 +51,7 @@
     <string name="failed">Gagal</string>
     <string name="widget_next">Berikutnya</string>
     <string name="widget_previous">Sebelumnya</string>
-    <string name="widget_open_bitchord">Buka BitChord</string>
+    <string name="widget_open_bitchord">Buka Lirika</string>
     <string name="download_quality">Kualitas unduhan</string>
     <string name="spatial_audio">Audio spasial</string>
     <string name="spatial_audio_subtitle">Melebarkan trek stereo untuk pengalaman yang lebih imersif</string>
@@ -186,7 +186,7 @@
     <string name="status_dialog_message">Apa yang ditampilkan akun Anda saat presence aktif.</string>
     <string name="token">Token</string>
     <string name="up_next">Berikutnya</string>
-    <string name="default_replay_holder">Pendengar BitChord</string>
+    <string name="default_replay_holder">Pendengar Lirika</string>
     <string name="member_since">Anggota sejak</string>
     <string name="midday">tengah hari</string>
     <string name="midnight">tengah malam</string>
@@ -246,7 +246,7 @@
     <string name="settings_search_hint">Cari pengaturan</string>
     <string name="dolby_atmos">Dolby Atmos</string>
     <string name="dolby_atmos_unavailable">Perangkat ini tidak dapat memutar Atmos, jadi lagu ini diputar dalam versi biasanya</string>
-    <string name="equalizer_footer">Membentuk suara di dalam BitChord, sebelum mencapai sistem.</string>
+    <string name="equalizer_footer">Membentuk suara di dalam Lirika, sebelum mencapai sistem.</string>
     <string name="equalizer_dynamic">Dinamis</string>
     <string name="equalizer_manual">Manual</string>
     <string name="equalizer_tone">Nada</string>

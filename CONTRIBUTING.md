@@ -1,6 +1,6 @@
-# Contributing to BitChord
+# Contributing to Lirika
 
-Thank you for contributing to BitChord. Follow these guidelines to ensure an efficient development and review process.
+Thank you for contributing to Lirika. Follow these guidelines to ensure an efficient development and review process.
 
 ## Proposing Contributions
 - Substantial features, refactors, or UI redesigns should normally be discussed before implementation. Open an issue on GitHub to outline your proposal.
@@ -73,7 +73,7 @@ A `v*` tag is the release: pushing one runs `.github/workflows/release.yml`, whi
 `SHA256SUMS.txt` manifest. Rules worth knowing before you cut one:
 
 - The tag without its leading `v` is the app version, and its patch number is also the desktop version
-  code (`-Pbitchord.build`), so `v1.8.30` produces `BitChord-1.8.30.*`. Cut a new tag rather than moving
+  code (`-Pbitchord.build`), so `v1.8.30` produces `Lirika-1.8.30.*`. Cut a new tag rather than moving
   one that has already been published.
 - The workflow fails rather than shipping a Windows build whose Fluent frame or SMTC DLLs did not compile
   (`require_windows_natives` is the documented override) and re-checks every hash before publishing.
@@ -96,6 +96,6 @@ Distinguish clearly between source metadata, decoder format, internal DSP format
 All pull requests require review and approval by repository maintainers before merging. Maintainers review changes for correctness, architecture fit, and maintainability.
 
 ## Dependencies and Licensing
-BitChord is licensed under the **GNU General Public License v3.0 (GPLv3)**.
+Lirika is licensed under the **GNU General Public License v3.0 (GPLv3)**.
 
 All contributed code and dependencies must be strictly compatible with GPLv3. Avoid introducing external dependencies unless strictly necessary; any new dependency must be evaluated for necessity, binary size, and license compliance.
