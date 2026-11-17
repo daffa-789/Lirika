@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -233,32 +232,31 @@ internal fun DesktopIslandCard(
         // Switch on the same expansion that sized the window. Measuring the box here disagreed
         // with AWT's bounds on scaled displays, so the open face was drawn inside a closed frame.
         val expandedFace = expansion >= 0.5f
+        // Fill the window, don't hand the face a fixed 480.dp slab. The window is sized with the
+        // user's scale multiplier, so a fixed slab is narrower than its frame whenever scale > 1:
+        // anchored top-start it leaves the slack on the right, and the lyrics, seek row and
+        // controls all read as shifted left of the capsule. Filling the window makes the face and
+        // the glass the same box, so the centred content is centred on the capsule itself.
         if (expandedFace) {
-            Box(
-                Modifier
-                    .width(ISLAND_EXPANDED_WIDTH.dp)
-                    .height(ISLAND_EXPANDED_HEIGHT.dp),
-            ) {
-                ExpandedIslandFace(
-                    song = song,
-                    now = now,
-                    positionMs = positionMs,
-                    durationMs = durationMs,
-                    isPlaying = isPlaying,
-                    repeatMode = repeatMode,
-                    volume = volume,
-                    onVolumeChange = { DesktopPlayerHost.onVolumeChange(it) },
-                    face = measured,
-                    interactive = interactive,
-                    onSeek = onSeek,
-                    onSeekStarted = onSeekStarted,
-                    onSeekFinished = onSeekFinished,
-                    onPlayPause = onPlayPause,
-                    onNext = onNext,
-                    onPrevious = onPrevious,
-                    onToggleRepeat = onToggleRepeat,
-                )
-            }
+            ExpandedIslandFace(
+                song = song,
+                now = now,
+                positionMs = positionMs,
+                durationMs = durationMs,
+                isPlaying = isPlaying,
+                repeatMode = repeatMode,
+                volume = volume,
+                onVolumeChange = { DesktopPlayerHost.onVolumeChange(it) },
+                face = measured,
+                interactive = interactive,
+                onSeek = onSeek,
+                onSeekStarted = onSeekStarted,
+                onSeekFinished = onSeekFinished,
+                onPlayPause = onPlayPause,
+                onNext = onNext,
+                onPrevious = onPrevious,
+                onToggleRepeat = onToggleRepeat,
+            )
         } else {
             CollapsedIslandFace(song = song, now = now)
         }
