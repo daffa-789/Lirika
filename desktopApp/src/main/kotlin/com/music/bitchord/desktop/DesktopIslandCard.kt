@@ -76,7 +76,7 @@ import com.music.bitchord.ui.icons.BitChordIcons
 internal const val ISLAND_COLLAPSED_WIDTH = 320f
 internal const val ISLAND_COLLAPSED_HEIGHT = 62f
 internal const val ISLAND_EXPANDED_WIDTH = 480f
-internal const val ISLAND_EXPANDED_HEIGHT = 150f
+internal const val ISLAND_EXPANDED_HEIGHT = 118f
 
 /**
  * The three lines the hovering island can show, and the one line the resting island shows.
