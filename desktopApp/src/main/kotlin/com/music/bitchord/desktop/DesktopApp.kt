@@ -1502,15 +1502,43 @@ fun BitChordDesktopApp() {
     // draws it — see PlaybackPosition — so a tick never recomposes the player.
     val playerPosition = remember { PlaybackPosition() }
     LaunchedEffect(playbackEngine) {
-        playbackEngine.state.collect {
+        // Keyed only on the engine, never on a screen state: this collector keeps running while
+        // the main window is hidden. The island is the only surface left then, so its lyrics and
+        // playhead are fed here rather than from an effect the window may stop recomposing.
+        var islandSongId: String? = null
+        playbackEngine.state.collect { state ->
             // The audio thread's own timestamp, not this collector's: it runs on the UI thread and
             // gets to a reading as late as the UI is busy.
-            playerPosition.report(it.positionMs, it.positionSampledAtNanos)
-            playerPosition.seeks = it.seeks
-            playerPosition.advancing = !it.awaitingAudio
+            playerPosition.report(state.positionMs, state.positionSampledAtNanos)
+            playerPosition.seeks = state.seeks
+            playerPosition.advancing = !state.awaitingAudio
+            DesktopIslandState.currentPositionMs.value = state.positionMs
+            DesktopIslandState.durationMs.value = state.durationMs
+            DesktopIslandState.isPlaying.value = state.isPlaying
+
+            val playing = state.song
+            if (playing != null && DesktopIslandState.currentSong.value?.videoId != playing.videoId) {
+                DesktopIslandState.currentSong.value = playing
+            }
+            if (playing == null || state.durationMs <= 0L) return@collect
+            if (playing.videoId == islandSongId) return@collect
+            islandSongId = playing.videoId
+            // Drop the last track's words before the lookup, so the capsule never shows a line
+            // belonging to a song that has already finished.
+            DesktopIslandState.lyricsLines.value = null
+            // The window's own lookup effect still runs when the window is on screen and owns the
+            // player UI. This one only keeps the capsule's lines current when that effect cannot —
+            // DesktopLyricsClient caches by track, so the duplication costs no second network race.
+            DesktopLyricsClient.lookup(playing, state.durationMs).onSuccess { found ->
+                if (DesktopIslandState.currentSong.value?.videoId == playing.videoId) {
+                    DesktopIslandState.lyricsLines.value = found.lines
+                }
+            }
         }
     }
 
+    // The old position/duration effect is folded into the collector above: two writers to the same
+    // two snapshot values let a hidden window's stopped collector leave the island progress frozen.
     // Lyrics and motion artwork follow whatever is *playing*, not whatever page happens to be open.
     // This is where Android keeps it — `MainActivity`, keyed on the player's own track — so the
     // lookup starts the moment a track does and the panel is already populated by the time anyone
@@ -1562,9 +1590,6 @@ fun BitChordDesktopApp() {
     ) {
         val current = selectedSong
         lyrics = null
-        // The island draws lyrics even with the main window put away. Clear its old lines here,
-        // not only from the effect below, so a new track cannot inherit the last one's words.
-        DesktopIslandState.lyricsLines.value = null
         lyricsError = null
         if (current == null) {
             lyricsLoading = false
@@ -1600,10 +1625,7 @@ fun BitChordDesktopApp() {
                 }
             },
         ).fold(
-            onSuccess = {
-                lyrics = it
-                DesktopIslandState.lyricsLines.value = it.lines
-            },
+            onSuccess = { lyrics = it },
             onFailure = { lyricsError = it.message ?: "Lyrics unavailable" },
         )
         lyricsLoading = false
@@ -2745,10 +2767,12 @@ fun BitChordDesktopApp() {
         openedCollection = null
     }
 
-    LaunchedEffect(selectedSong, playback.isPlaying, sharedLyrics, repeatMode, liveQueue) {
-        DesktopIslandState.currentSong.value = selectedSong
+    LaunchedEffect(selectedSong, playback.isPlaying, repeatMode, liveQueue) {
+        // Song, lyrics and playhead are fed by paths that keep running with the window hidden —
+        // mirrorIslandSong(), the lookup effect and the engine collector above. Only the callbacks
+        // and repeat mode are window-owned; writing the others here would overwrite a newer value
+        // the audio thread had already put on the island.
         DesktopIslandState.isPlaying.value = playback.isPlaying
-        DesktopIslandState.lyricsLines.value = sharedLyrics
         DesktopIslandState.repeatMode.value = repeatMode
         // The queue rides along, so the capsule's menu can start any row of it — the same jump
         // the queue sheet's tap makes — with the main window closed.
@@ -2780,13 +2804,6 @@ fun BitChordDesktopApp() {
             dismissPlayerPages()
             repeatMode = repeatMode.next()
             persistence.saveString("repeat_mode", repeatMode.name)
-        }
-    }
-    LaunchedEffect(playbackEngine) {
-        playbackEngine.state.collect {
-            DesktopIslandState.currentPositionMs.value = it.positionMs
-            // The island's progress hairline is the song's own progress, not the lyric's.
-            DesktopIslandState.durationMs.value = it.durationMs
         }
     }
     val sharedLyricsSource = remember(lyrics) { lyrics?.source?.let(::lyricsSourceNamed) }
