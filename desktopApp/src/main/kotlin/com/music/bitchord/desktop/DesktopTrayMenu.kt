@@ -33,6 +33,7 @@ internal object DesktopTrayMenu {
 
     private var nowPlaying: String? = null
     private var isPlaying = false
+    private var islandEnabled = true
     private var revision = 1
 
     private var playPause: () -> Unit = {}
@@ -77,6 +78,16 @@ internal object DesktopTrayMenu {
         onLayoutChanged(next)
     }
 
+    /** Called when the island is switched elsewhere, so the tray row says what a click will do. */
+    fun publishIsland(enabled: Boolean) {
+        val next = synchronized(lock) {
+            if (enabled == islandEnabled) return
+            islandEnabled = enabled
+            ++revision
+        }
+        onLayoutChanged(next)
+    }
+
     fun revision(): Int = synchronized(lock) { revision }
 
     /** The menu as it stands. */
@@ -101,7 +112,11 @@ internal object DesktopTrayMenu {
             add(
                 Entry(
                     ID_ISLAND,
-                    label = DesktopStrings["d_island_tray", "Dynamic Island"],
+                    label = if (islandEnabled) {
+                        DesktopStrings["d_island_turn_off", "Turn off island"]
+                    } else {
+                        DesktopStrings["d_island_turn_on", "Turn on island"]
+                    },
                     icon = "view-media-lyrics",
                     action = toggleIsland,
                 ),

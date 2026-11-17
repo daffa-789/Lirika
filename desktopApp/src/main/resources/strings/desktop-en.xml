@@ -73,6 +73,8 @@
     <string name="d_island_floating">Floating island</string>
     <string name="d_island_floating_subtitle">A capsule that stays on screen while you work, and opens into the player when the pointer lands on it</string>
     <string name="d_island_tray">Dynamic Island</string>
+    <string name="d_island_turn_off">Turn off island</string>
+    <string name="d_island_turn_on">Turn on island</string>
     <string name="d_island_hide_paused">Hide while paused</string>
     <string name="d_island_hide_paused_subtitle">Takes the capsule off the screen whenever playback is paused</string>
     <string name="d_crossfade_on_skip">Crossfade on skip</string>

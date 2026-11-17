@@ -71,6 +71,8 @@
     <string name="d_island_floating">Kapsul mengambang</string>
     <string name="d_island_floating_subtitle">Kapsul yang tetap menempel di layar saat kamu bekerja, dan terbuka jadi pemutar saat kursor mendarat di atasnya</string>
     <string name="d_island_tray">Island</string>
+    <string name="d_island_turn_off">Matikan Island</string>
+    <string name="d_island_turn_on">Nyalakan Island</string>
     <string name="d_island_hide_paused">Sembunyikan saat jeda</string>
     <string name="d_island_hide_paused_subtitle">Menghilangkan kapsul dari layar setiap kali pemutaran dijeda</string>
     <string name="d_crossfade_on_skip">Crossfade saat skip</string>

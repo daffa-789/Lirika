@@ -696,10 +696,26 @@ fun BitChordDesktopApp() {
         persistence.saveString("queue_index", liveQueue.index.toString())
     }
 
+    /**
+     * Mirrors the song into the island the moment it changes.
+     *
+     * The island used to learn about a new song only from a [LaunchedEffect] in this composable.
+     * That breaks in two places: with the main window hidden the island is the only surface left,
+     * and a crossfade hand-off announces its new song from the audio thread. Writing the flows
+     * here — thread-safe by way of MutableStateFlow — keeps the capsule's title and cover in step
+     * with what is actually playing, whichever route got there.
+     */
+    fun mirrorIslandSong(song: Song?, queue: DesktopQueue) {
+        DesktopIslandState.currentSong.value = song
+        DesktopIslandState.queueSongs.value = queue.songs
+        DesktopIslandState.queueIndex.value = queue.index
+    }
+
     /** Opens whatever the queue is currently pointing at. */
     fun playCurrent(startPlaying: Boolean = true) {
         val song = liveQueue.current ?: return
         selectedSong = song
+        mirrorIslandSong(song, liveQueue)
         history = (listOf(song) + history.filterNot { it.videoId == song.videoId }).take(50)
         saveQueue()
         persistence.saveHistory(history)
@@ -1330,6 +1346,11 @@ fun BitChordDesktopApp() {
                 }
             },
             onCrossfaded = { song ->
+                // Announced from the audio thread. Publish the island's song first — it must not
+                // wait for a main-window effect that may not be running while the window is hidden.
+                // The queue still moves on the main thread below; the capsule's title and cover
+                // are what have to change with the audio, immediately.
+                DesktopIslandState.currentSong.value = song
                 scope.launch {
                     // The queue moves with the audio. Only the selection used to, which left the
                     // queue on the track that had just finished — so Next "advanced" onto the song
@@ -1541,6 +1562,9 @@ fun BitChordDesktopApp() {
     ) {
         val current = selectedSong
         lyrics = null
+        // The island draws lyrics even with the main window put away. Clear its old lines here,
+        // not only from the effect below, so a new track cannot inherit the last one's words.
+        DesktopIslandState.lyricsLines.value = null
         lyricsError = null
         if (current == null) {
             lyricsLoading = false
@@ -1576,7 +1600,10 @@ fun BitChordDesktopApp() {
                 }
             },
         ).fold(
-            onSuccess = { lyrics = it },
+            onSuccess = {
+                lyrics = it
+                DesktopIslandState.lyricsLines.value = it.lines
+            },
             onFailure = { lyricsError = it.message ?: "Lyrics unavailable" },
         )
         lyricsLoading = false
@@ -2226,6 +2253,14 @@ fun BitChordDesktopApp() {
             },
         )
     }
+    LaunchedEffect(islandEnabled) {
+        // The tray row is a verb, not a noun: re-label it whenever the island is switched,
+        // including from the island's own menu or Settings. tray.update() rebuilds the AWT
+        // popup from the current entries, so the new label reaches both tray backends.
+        DesktopTrayMenu.publishIsland(islandEnabled)
+        tray.update(title = selectedSong?.let { "${it.title} — ${it.artist}" }, isPlaying = playback.isPlaying)
+    }
+
     LaunchedEffect(selectedSong, playback.isPlaying) {
         val title = selectedSong?.let { "${it.title} — ${it.artist}" }
         tray.update(title = title, isPlaying = playback.isPlaying)

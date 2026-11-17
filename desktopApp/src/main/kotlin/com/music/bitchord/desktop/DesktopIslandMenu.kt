@@ -11,6 +11,7 @@ import androidx.compose.material.icons.rounded.FastRewind
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -106,9 +107,21 @@ internal fun DynamicIslandMenu(
 
         HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
 
-        MenuCheck(DesktopStrings["d_island_floating", "Floating island"], enabled) {
-            DesktopDynamicIslandSettings.setEnabled(it)
-        }
+        // A plain action rather than a tick box: the label says what the click will do, which is
+        // the one thing a person needs to know. The state is still read from the same setting, so
+        // the toolbar's note icon and Settings cannot disagree with this row.
+        MenuAction(
+            label = if (enabled) {
+                DesktopStrings["d_island_turn_off", "Turn off island"]
+            } else {
+                DesktopStrings["d_island_turn_on", "Turn on island"]
+            },
+            icon = if (enabled) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+            onClick = {
+                DesktopDynamicIslandSettings.setEnabled(!enabled)
+                onDismissRequest()
+            },
+        )
         if (DesktopPlatform.isWindows) {
             MenuCheck(DesktopStrings["d_island_click_through", "Click-through"], clickThrough) {
                 DesktopDynamicIslandSettings.setClickThrough(it)
