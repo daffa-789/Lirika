@@ -76,8 +76,8 @@ import com.music.bitchord.ui.icons.BitChordIcons
  */
 internal const val ISLAND_COLLAPSED_WIDTH = 320f
 internal const val ISLAND_COLLAPSED_HEIGHT = 62f
-internal const val ISLAND_EXPANDED_WIDTH = 560f
-internal const val ISLAND_EXPANDED_HEIGHT = 96f
+internal const val ISLAND_EXPANDED_WIDTH = 480f
+internal const val ISLAND_EXPANDED_HEIGHT = 150f
 
 /**
  * The three lines the hovering island can show, and the one line the resting island shows.
@@ -277,6 +277,7 @@ internal fun DesktopIslandCard(
  * artwork + lyrics alone.
  */
 @Composable
+@Suppress("UNUSED_PARAMETER")
 private fun ExpandedIslandFace(
     song: Song?,
     now: IslandLines,
@@ -297,110 +298,49 @@ private fun ExpandedIslandFace(
     onToggleRepeat: () -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
-        Row(
+        // Cover on the left; the three lyric lines are centred across the whole face.
+        Box(
             Modifier
                 .weight(1f)
-                .fillMaxWidth()
-                .padding(start = 10.dp, end = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .fillMaxWidth(),
         ) {
+            key(song?.videoId) {
+                AnimatedContent(
+                    targetState = now.activeIndex,
+                    transitionSpec = {
+                        (slideInVertically(animationSpec = tween(LYRIC_ROLL_MS)) { it / 3 } +
+                            fadeIn(tween(LYRIC_ROLL_MS))).togetherWith(
+                            slideOutVertically(animationSpec = tween(LYRIC_ROLL_MS)) { -it / 3 } +
+                                fadeOut(tween(LYRIC_ROLL_MS)),
+                        )
+                    },
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(horizontal = 62.dp),
+                    label = "islandLinesExpanded",
+                ) { index ->
+                    val at = now.at(index)
+                    Column(Modifier.fillMaxWidth()) {
+                        IslandLine(text = at.previous, fontSize = 10.sp, active = false)
+                        IslandLine(text = at.current, fontSize = 13.sp, active = true)
+                        IslandLine(text = at.next, fontSize = 10.sp, active = false)
+                    }
+                }
+            }
             DesktopArtwork(
                 url = song?.thumbnailUrl,
                 modifier = Modifier
-                    .size(72.dp)
+                    .align(Alignment.CenterStart)
+                    .padding(start = 10.dp)
+                    .size(52.dp)
                     .clip(RectangleShape)
                     .background(Color(0xFF222226)),
                 contentDescription = "Cover",
                 px = ISLAND_COVER_LARGE_PX,
             )
-
-            Column(
-                Modifier.weight(1f),
-                verticalArrangement = Arrangement.Center,
-            ) {
-                key(song?.videoId) {
-                    AnimatedContent(
-                        targetState = now.activeIndex,
-                        transitionSpec = {
-                            (slideInVertically(animationSpec = tween(LYRIC_ROLL_MS)) { it / 3 } +
-                                fadeIn(tween(LYRIC_ROLL_MS))).togetherWith(
-                                slideOutVertically(animationSpec = tween(LYRIC_ROLL_MS)) { -it / 3 } +
-                                    fadeOut(tween(LYRIC_ROLL_MS)),
-                            )
-                        },
-                        label = "islandLinesExpanded",
-                    ) { index ->
-                        val at = now.at(index)
-                        Column(Modifier.fillMaxWidth()) {
-                            IslandLine(text = at.previous, fontSize = 9.sp, active = false)
-                            IslandLine(text = at.current, fontSize = 12.sp, active = true)
-                            IslandLine(text = at.next, fontSize = 9.sp, active = false)
-                        }
-                    }
-                }
-            }
-
-            // Controls only exist on the hovered face.
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IslandControlButton(
-                    icon = Icons.Rounded.FastRewind,
-                    tooltip = "Previous",
-                    size = 24.dp,
-                    iconSize = 13.dp,
-                    enabled = interactive,
-                    onClick = onPrevious,
-                )
-                IslandControlButton(
-                    icon = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                    tooltip = if (isPlaying) "Pause" else "Play",
-                    size = 30.dp,
-                    iconSize = 18.dp,
-                    isPrimary = true,
-                    enabled = interactive,
-                    onClick = onPlayPause,
-                )
-                IslandControlButton(
-                    icon = Icons.Rounded.FastForward,
-                    tooltip = "Next",
-                    size = 24.dp,
-                    iconSize = 13.dp,
-                    enabled = interactive,
-                    onClick = onNext,
-                )
-                IslandControlButton(
-                    icon = BitChordIcons.Repeat,
-                    tooltip = "Repeat: ${repeatMode.label()}",
-                    size = 24.dp,
-                    iconSize = 13.dp,
-                    tint = if (repeatMode != DesktopRepeatMode.OFF) Color(0xFFFFD54F)
-                    else Color.White.copy(alpha = 0.62f),
-                    badgeText = if (repeatMode == DesktopRepeatMode.ONE) "1" else null,
-                    enabled = interactive,
-                    onClick = onToggleRepeat,
-                )
-                Icon(
-                    Icons.AutoMirrored.Rounded.VolumeUp,
-                    contentDescription = "Volume",
-                    tint = Color.White.copy(alpha = 0.70f),
-                    modifier = Modifier.size(13.dp),
-                )
-                DesktopThinSlider(
-                    value = volume.coerceIn(0f, 1f),
-                    onValueChange = onVolumeChange,
-                    modifier = Modifier.width(40.dp),
-                    idleHeight = 3.dp,
-                    activeHeight = 5.dp,
-                    activeColor = Color.White.copy(alpha = 0.88f),
-                    inactiveColor = Color.White.copy(alpha = 0.20f),
-                )
-            }
         }
 
-        // Seek/progress also belongs to the hovered face only.
+        // Progress sits between the lyrics and the controls.
         if (onSeek != null) {
             Box(Modifier.graphicsLayer { alpha = ((face.floatValue - 0.5f) / 0.5f).coerceIn(0f, 1f) }) {
                 IslandSeekRow(
@@ -411,6 +351,56 @@ private fun ExpandedIslandFace(
                     onSeekFinished = onSeekFinished,
                 )
             }
+        }
+
+        // Controls centred on the bottom row, volume at the end.
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(bottom = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IslandControlButton(
+                icon = Icons.Rounded.FastRewind,
+                tooltip = "Previous",
+                size = 26.dp,
+                iconSize = 14.dp,
+                enabled = interactive,
+                onClick = onPrevious,
+            )
+            IslandControlButton(
+                icon = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                tooltip = if (isPlaying) "Pause" else "Play",
+                size = 32.dp,
+                iconSize = 18.dp,
+                isPrimary = true,
+                enabled = interactive,
+                onClick = onPlayPause,
+            )
+            IslandControlButton(
+                icon = Icons.Rounded.FastForward,
+                tooltip = "Next",
+                size = 26.dp,
+                iconSize = 14.dp,
+                enabled = interactive,
+                onClick = onNext,
+            )
+            Icon(
+                Icons.AutoMirrored.Rounded.VolumeUp,
+                contentDescription = "Volume",
+                tint = Color.White.copy(alpha = 0.70f),
+                modifier = Modifier.size(14.dp),
+            )
+            DesktopThinSlider(
+                value = volume.coerceIn(0f, 1f),
+                onValueChange = onVolumeChange,
+                modifier = Modifier.width(46.dp),
+                idleHeight = 3.dp,
+                activeHeight = 5.dp,
+                activeColor = Color.White.copy(alpha = 0.88f),
+                inactiveColor = Color.White.copy(alpha = 0.20f),
+            )
         }
     }
 }
