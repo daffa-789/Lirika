@@ -69,7 +69,7 @@ sealed interface DownloadState {
  */
 object Downloads {
 
-    private const val TAG = "BitChord"
+    private const val TAG = "Lirika"
     private const val KEY_SAVED_METADATA = "downloaded_tracks_metadata"
     private const val KEY_SAVED_COLLECTIONS = "downloaded_collections"
 

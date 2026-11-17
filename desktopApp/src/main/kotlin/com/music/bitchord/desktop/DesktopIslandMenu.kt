@@ -85,7 +85,7 @@ internal fun DynamicIslandMenu(
 
         // The queue's tail, one row per song: tapping one starts it, exactly as tapping the row in
         // the queue sheet does. Kept to a handful so a radio queue of fifty does not become a
-        // menu of fifty — the rest are one "Open BitChord" away.
+        // menu of fifty — the rest are one "Open Lirika" away.
         val upcoming = queueSongs.drop(queueIndex + 1)
         if (upcoming.isNotEmpty()) {
             HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
@@ -130,13 +130,13 @@ internal fun DynamicIslandMenu(
 
         HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
 
-        MenuAction(DesktopStrings["d_island_open_app", "Open BitChord…"], BitChordIcons.MusicNote) {
+        MenuAction(DesktopStrings["d_island_open_app", "Open Lirika…"], BitChordIcons.MusicNote) {
             onDismissRequest()
             // Bringing the main window back is enough. The island is the player when it is on
             // screen; opening the full player as well would put two surfaces on the same song.
             DesktopWindowVisibility.show()
         }
-        MenuAction(DesktopStrings["d_island_hide_app", "Hide BitChord"], Icons.Rounded.VisibilityOff) {
+        MenuAction(DesktopStrings["d_island_hide_app", "Hide Lirika"], Icons.Rounded.VisibilityOff) {
             onDismissRequest()
             // The island is its own window, so this puts the main window away without taking the
             // capsule with it — the app is out of sight, the island is not.

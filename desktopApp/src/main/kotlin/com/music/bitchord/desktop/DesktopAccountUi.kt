@@ -400,7 +400,7 @@ internal fun DesktopSignInDialog(
                     DesktopStrings[
                         "d_google_signs_in_inside_a_browser",
                         "Google signs in inside a browser and hands back a session. Pick a browser " +
-                            "here that is already signed in and BitChord will use its session.",
+                            "here that is already signed in and Lirika will use its session.",
                     ]
                 },
                 style = MaterialTheme.typography.bodySmall,
@@ -476,7 +476,7 @@ internal fun DesktopSignInDialog(
                                         if (busy == WEB_SIGN_IN) {
                                             "Finish in the sign-in window, then choose \"Use this profile\""
                                         } else {
-                                            "Opens Google's sign-in page in a BitChord window"
+                                            "Opens Google's sign-in page in a Lirika window"
                                         },
                                         style = MaterialTheme.typography.bodySmall,
                                         color = DesktopSecondary,

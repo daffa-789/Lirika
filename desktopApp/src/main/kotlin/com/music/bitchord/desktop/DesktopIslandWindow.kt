@@ -187,7 +187,7 @@ internal fun DesktopIslandWindow() {
          * An empty island is a window one pixel across, so it neither shows nor catches a click.
          */
         visible = true,
-        title = "BitChord Island",
+        title = "Lirika Island",
         undecorated = true,
         transparent = true,
         resizable = false,
