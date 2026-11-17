@@ -2957,46 +2957,10 @@ fun BitChordDesktopApp() {
                         onDestinationSelected = ::selectDestination,
                     )
                 },
-                dock = { compact ->
-                    DesktopPlayerDock(
-                        song = selectedSong,
-                        isPlaying = playback.isPlaying,
-                        isLoading = playback.isLoading,
-                        hasPrevious = liveQueue.hasPrevious ||
-                            playerPosition.positionMs > BACK_RESTARTS_AFTER_MS,
-                        position = playerPosition,
-                        durationMs = { playback.durationMs },
-                        volume = playback.volume,
-                        shuffle = shuffle,
-                        repeatMode = repeatMode,
-                        compact = compact,
-                        onPlayPause = { if (selectedSong != null) togglePlayPauseFromUser() },
-                        onPrevious = ::playPrevious,
-                        onNext = ::playNext,
-                        onSeekFraction = { fraction ->
-                            val duration = playback.durationMs
-                            if (duration > 0L) seekPlayer((duration * fraction).toLong())
-                        },
-                        onVolumeChange = {
-                            volume = it
-                            persistence.saveString("volume", it.toString())
-                        },
-                        onShuffleChange = ::setShuffle,
-                        onRepeatChange = {
-                            repeatMode = it
-                            persistence.saveString("repeat_mode", it.name)
-                        },
-                        // "Open player" means the island: the full sheet is retired, so this
-                        // brings the capsule back rather than opening a second surface.
-                        onOpenNowPlaying = {
-                            DesktopDynamicIslandSettings.setEnabled(true)
-                            DesktopWindowVisibility.show()
-                        },
-                        onOpenLyrics = { overlays.toggleSidePanel(DesktopSidePanel.LYRICS) },
-                        onOpenQueue = { overlays.toggleSidePanel(DesktopSidePanel.QUEUE) },
-                        onOpenAudioOutput = { overlays.audioOutput = true },
-                    )
-                },
+                // The island is the one player surface. The old in-window dock grew into a second
+                // full player on hover — the panel that duplicated the island — so it is gone.
+                // Playback still answers to the island, the media keys and the song rows.
+                dock = {},
                 trailing = {
                     val current = selectedSong
                     DesktopSidePanelColumn(
@@ -4498,9 +4462,9 @@ private fun DesktopFrame(
                                             PaddingValues(
                                                 start = 0.dp,
                                                 end = 0.dp,
-                                                // Room for the bar that floats over this, so the
-                                                // last row can still be scrolled clear of it.
-                                                bottom = if (compact) 208.dp else 112.dp,
+                                                // The dock is gone; the island is the player. Only
+                                                // the compact navigation pill needs clearance now.
+                                                bottom = if (compact) 88.dp else 0.dp,
                                             ),
                                         )
                                     }
