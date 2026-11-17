@@ -323,6 +323,100 @@ fatNativeDrops.keys.forEach { coordinate ->
     }
 }
 
+/**
+ * Compose's extended icon set is 36 MB and ~11,000 classes, while this app imports a few dozen.
+ * Compilation still sees the full artifact (every icon is imported by name in source); only the
+ * jar that ships is rewritten. The keep-set is discovered from compiled bytecode, so adding an
+ * icon needs no build-file change: it compiles against the full jar and is picked up here.
+ *
+ * The core artifact (858 KB, ~300 icons) is left untouched — only the extended jar is stripped.
+ */
+val strippedIconsDir = layout.buildDirectory.dir("stripped-icons/$targetOs")
+
+val iconClassPattern = Regex(
+    "androidx/compose/material/icons/(?:automirrored/)?(?:rounded|filled|outlined|sharp|twotone)/[A-Za-z0-9_]+Kt",
+)
+
+val stripUnusedIcons by tasks.registering {
+    group = "distribution"
+    description = "Rewrites material-icons-extended down to the icon classes the app actually references."
+    // nativeFat is the same dependency graph without the runtime excludes. The second input adds
+    // this module's own classes, which are not a jar in that graph.
+    val scanInputs = files(nativeFat, sourceSets.main.get().output)
+    inputs.files(scanInputs)
+    inputs.property("target", targetOs)
+    outputs.dir(strippedIconsDir)
+    doLast {
+        val extendedJar = nativeFat.incoming.artifacts.artifacts
+            .firstOrNull {
+                it.id.componentIdentifier.toString()
+                    .startsWith("org.jetbrains.compose.material:material-icons-extended")
+            }
+            ?.file
+            ?: error("stripUnusedIcons: material-icons-extended is no longer on the compile classpath")
+
+        val extendedClasses = mutableSetOf<String>()
+        ZipFile(extendedJar).use { zip ->
+            zip.entries().toList().forEach {
+                if (!it.isDirectory && it.name.endsWith(".class")) extendedClasses += it.name
+            }
+        }
+
+        val referenced = mutableSetOf<String>()
+        fun record(bytes: ByteArray) {
+            iconClassPattern.findAll(String(bytes, Charsets.ISO_8859_1)).forEach {
+                referenced += it.value + ".class"
+            }
+        }
+        scanInputs.files.forEach { file ->
+            // Scanning the extended jar itself would match every class' own name and keep all 11k.
+            if (file == extendedJar) return@forEach
+            when {
+                file.isDirectory -> file.walkTopDown()
+                    .filter { it.isFile && it.extension == "class" }
+                    .forEach { record(it.readBytes()) }
+                file.name.endsWith(".jar") -> ZipFile(file).use { zip ->
+                    zip.entries().toList().forEach { entry ->
+                        if (!entry.isDirectory && entry.name.endsWith(".class")) {
+                            record(zip.getInputStream(entry).readBytes())
+                        }
+                    }
+                }
+            }
+        }
+        val keep = referenced intersect extendedClasses
+        check(keep.isNotEmpty()) {
+            "stripUnusedIcons: no extended icons found in the compiled output — the scan is broken, " +
+                "refusing to ship an empty jar."
+        }
+        // The kotlin_module file still lists all ~11k classes; leaving it in would advertise
+        // classes that are no longer present. MANIFEST and directory entries are kept by rewriteJar.
+        val drop = (extendedClasses - keep).toList() + "META-INF/material-icons-extended.kotlin_module"
+        val outFile = File(strippedIconsDir.get().asFile, extendedJar.name)
+        strippedIconsDir.get().asFile.mkdirs()
+        val (kept, dropped) = rewriteJar(extendedJar, outFile, drop)
+        logger.lifecycle(
+            "stripUnusedIcons: keeps $kept entries (${keep.size} icon classes), drops $dropped — " +
+                "only icons actually referenced by the app ship in the runtime jar.",
+        )
+    }
+}
+
+val strippedIconJars = files(strippedIconsDir.map { it.asFileTree }).builtBy(stripUnusedIcons)
+
+dependencies {
+    runtimeOnly(strippedIconJars)
+    // The core artifact (858 KB, ~300 commonly used icons) used to arrive transitively through
+    // material-icons-extended. Excluding the extended jar from runtimeClasspath removes that edge,
+    // so name the core jar here — 280 of the app's icon references are served by it.
+    runtimeOnly("org.jetbrains.compose.material:material-icons-core-desktop:1.7.3")
+}
+
+// Keep the full artifact on compileClasspath, but never on the shipped runtime classpath.
+configurations.named("runtimeClasspath") {
+    exclude(mapOf("group" to "org.jetbrains.compose.material", "module" to "material-icons-extended-desktop"))
+}
+
 tasks.withType<Test> {
     systemProperty("java.awt.headless", "true")
 }
@@ -630,6 +724,17 @@ val windowsPortableAssemble by tasks.registering {
             }
             if (jars.any { it.name.contains("skiko-awt-runtime-linux") }) {
                 add("a Linux Skiko renderer is in a Windows archive")
+            }
+            // The slim icon jar must be the one on the runtime classpath. A full extended jar
+            // (~36 MB) means the runtime exclude or the strip task stopped applying.
+            if (jars.any { it.name.contains("material-icons-extended") && it.length() > 5_000_000 }) {
+                add("the full extended icon jar is in the archive — stripUnusedIcons did not run")
+            }
+            if (jars.none { it.name.contains("material-icons-extended") }) {
+                add("the stripped icon jar is missing from the archive")
+            }
+            if (jars.none { it.name.contains("material-icons-core") }) {
+                add("the core icon jar is missing — most of the app's icons would be blank")
             }
             if (!holds("org/bytedeco/ffmpeg/windows-x86_64/avformat.dll") &&
                 jars.none { it.name.contains("ffmpeg") && it.name.contains("windows-x86_64") }
