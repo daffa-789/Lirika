@@ -102,9 +102,8 @@ dependencies {
     implementation("org.bytedeco:ffmpeg:$ffmpegVersion")
     implementation("org.bytedeco:ffmpeg:$ffmpegVersion:$nativeClassifier")
 
-    // The same backdrop blur the Android build uses for its floating bars.
-    // On Windows, 1.7.2 keeps this Compose Desktop 1.10.3 app on the matching UI/text/animation
-    // runtime. Preserve Linux's existing dependency graph exactly as it was.
+    // Both targets now ship Compose 1.12.2 with Haze 1.7.3, the pairing that matches
+    // the 1.12 ShaderBrush ABI. Haze 1.7.2 belonged to the old Windows 1.10.3 graph.
     val haze = when (targetOs) {
         "windows" -> property("haze.windows")
         else -> property("haze.linux")
@@ -797,6 +796,13 @@ compose.desktop {
         mainClass = composeMainClass
         jvmArgs("-Xmx512m")
         jvmArgs("-XX:+UseG1GC")
+        // JDK 25 ergonomics. Compact headers shrink object headers on the heap,
+        // string dedup helps the many repeated metadata/lyric strings, and native
+        // access is granted explicitly so Gradle/Skiko/FFmpeg stop warning and are
+        // not blocked when a future JDK makes restricted reflection fatal.
+        jvmArgs("-XX:+UseCompactObjectHeaders")
+        jvmArgs("-XX:+UseStringDeduplication")
+        jvmArgs("--enable-native-access=ALL-UNNAMED")
         // A forced collection every 20 s kept the idle heap small but woke the process on a timer
         // even while nothing was playing. G1's own pacing is enough for a music player.
         jvmArgs("-Dbitchord.version=$appVersion")

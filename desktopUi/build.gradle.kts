@@ -23,24 +23,19 @@ val targetOs: String = (providers.gradleProperty("bitchord.target").orNull ?: wh
 }).lowercase()
 
 /**
- * What the desktop graph resolves, and what this module is compiled against.
- *
- * Skia's Matrix33 became an inline float[9] between skiko 0.9 and 0.15
- * (`makeTranslate` went from returning a Matrix33 to a name-mangled float[]
- * overload), so bytecode compiled against 0.9 linked its object call and
- * crashed with NoSuchMethodError on a desktop running 0.15 the first time a
- * lyric line grew. Compiling against the version the desktop actually resolves
- * keeps the compile-time link and the runtime link the same.
+ * Both desktop targets now resolve Compose Multiplatform 1.12.2 / Skiko milestone
+ * 150. Keeping this module compiled against the shipped version avoids the old
+ * Matrix33 ABI split: bytecode built against Skiko 0.9 called an object-returning
+ * `makeTranslate` that no longer exists on 0.150 and died on the first grown lyric.
  */
 val cmp = when (targetOs) {
     "windows" -> property("compose.windows")
     else -> property("compose.linux")
 }
 
-// Haze 1.7.x, which the Windows build uses (see desktopApp/build.gradle.kts), was compiled
-// against a ShaderBrush.createShader that returns skia's Shader; 1.12 changed that return
-// type, so on 1.12 every blur dies with NoSuchMethodError. Windows stays on the plugin's
-// own 1.10.3 / skiko 0.9; only Linux moves to 1.12.
+// Haze 1.7.3 is the build that matches Compose 1.12's ShaderBrush ABI; Haze 1.7.2
+// was pinned to the pre-1.12 createShader return type and crashed every blur with
+// NoSuchMethodError. Both desktop platforms now use the same pair.
 val haze = when (targetOs) {
     "windows" -> property("haze.windows")
     else -> property("haze.linux")

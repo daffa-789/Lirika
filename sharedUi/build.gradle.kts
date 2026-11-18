@@ -75,7 +75,7 @@ kotlin {
             api("org.jetbrains.compose.material:material-icons-extended:1.7.3")
             api("org.jetbrains.compose.components:components-resources:$cmp")
             api("org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose:2.8.4")
-            api("io.coil-kt.coil3:coil-compose:3.0.4")
+            api("io.coil-kt.coil3:coil-compose:3.6.3")
             api("dev.chrisbanes.haze:haze:1.3.1")
             api("dev.chrisbanes.haze:haze-materials:1.3.1")
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
