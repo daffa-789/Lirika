@@ -45,7 +45,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -54,6 +56,7 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -98,6 +101,9 @@ internal class IslandLines(
     /** The lyric at [index], or null when the track has no real line there. */
     fun lineAt(index: Int): String? = raw.getOrNull(index)?.text?.takeIf { it.isNotBlank() }
 
+    /** The timed line itself, for the karaoke sweep rather than just its words. */
+    fun lyricAt(index: Int): LyricLine? = raw.getOrNull(index)
+
     fun at(index: Int): IslandLines = IslandLines(index, raw, fallback)
 }
 
@@ -123,6 +129,32 @@ internal fun activeLyricIndex(lines: List<LyricLine>, positionMs: Long): Int {
     }
     return found
 }
+
+/**
+ * How much of the active line to light up, 0..1.
+ *
+ * Word-synced lines use their own timings, the same as the full player. A
+ * line-synced source gives no word ends, so the line's sung stretch is the only
+ * clock there is: its stamped end when the provider gave one, otherwise the gap
+ * to the next line. That last case is an approximation — a slow line held over
+ * ten seconds of silence reads as a slow wipe — but it is a wipe rather than
+ * the whole line snapping on at once, which is what the island used to do.
+ */
+internal fun islandLineReveal(now: IslandLines, positionMs: Long): Float {
+    val line = now.lyricAt(now.activeIndex) ?: return 0f
+    if (line.isGap || positionMs < line.timeMs) return 0f
+    val sung = if (line.words.isNotEmpty()) {
+        line.revealedChars(positionMs) / line.text.length.coerceAtLeast(1)
+    } else {
+        val end = line.sungUntilMs?.takeIf { it > line.timeMs }
+            ?: now.lyricAt(now.activeIndex + 1)?.timeMs?.takeIf { it > line.timeMs }
+            ?: (line.timeMs + ISLAND_LINE_FALLBACK_MS)
+        (positionMs - line.timeMs).toFloat() / (end - line.timeMs).coerceAtLeast(1L)
+    }
+    return sung.coerceIn(0f, 1f)
+}
+
+private const val ISLAND_LINE_FALLBACK_MS = 4_000L
 
 private fun islandLines(lines: List<LyricLine>?, song: Song?, activeIndex: Int): IslandLines =
     IslandLines(
@@ -173,6 +205,8 @@ internal fun DesktopIslandCard(
     lines: List<LyricLine>?,
     positionMs: () -> Long,
     durationMs: () -> Long,
+    /** The player's lyric offset in ms; it steers the words, never the progress bar. */
+    lyricsOffsetMs: () -> Int = { 0 },
     isPlaying: Boolean,
     repeatMode: DesktopRepeatMode,
     scale: Float,
@@ -191,11 +225,21 @@ internal fun DesktopIslandCard(
     modifier: Modifier = Modifier,
     menu: (@Composable BoxScope.() -> Unit)? = null,
 ) {
+    // The progress bar reads the raw engine playhead; the words read the same
+    // playhead shifted by the listener's lyric offset, as the full player does.
+    val lyricPositionMs by remember {
+        derivedStateOf { (positionMs() - lyricsOffsetMs()).coerceAtLeast(0L) }
+    }
     // Re-read only when the sung line changes, not on every playhead tick.
     val activeIndex by remember(lines, song) {
-        derivedStateOf { activeLyricIndex(lines.orEmpty(), positionMs()) }
+        derivedStateOf { activeLyricIndex(lines.orEmpty(), lyricPositionMs) }
     }
     val now = remember(lines, song, activeIndex) { islandLines(lines, song, activeIndex) }
+    // The sweep does change on a tick, but only this Float is read again; the
+    // three-line block is keyed on the line index, so rolling text stays cheap.
+    val reveal by remember(lines, song, activeIndex) {
+        derivedStateOf { islandLineReveal(now, lyricPositionMs) }
+    }
     // The same volume the dock and the OS media keys write; no second source of truth.
     val volume by DesktopPlayerHost.volumeLevel.collectAsState()
 
@@ -241,6 +285,7 @@ internal fun DesktopIslandCard(
             ExpandedIslandFace(
                 song = song,
                 now = now,
+                reveal = reveal,
                 positionMs = positionMs,
                 durationMs = durationMs,
                 isPlaying = isPlaying,
@@ -258,7 +303,7 @@ internal fun DesktopIslandCard(
                 onToggleRepeat = onToggleRepeat,
             )
         } else {
-            CollapsedIslandFace(song = song, now = now)
+            CollapsedIslandFace(song = song, now = now, reveal = reveal)
         }
 
         if (menu != null) {
@@ -279,6 +324,7 @@ internal fun DesktopIslandCard(
 private fun ExpandedIslandFace(
     song: Song?,
     now: IslandLines,
+    reveal: Float,
     positionMs: () -> Long,
     durationMs: () -> Long,
     isPlaying: Boolean,
@@ -322,7 +368,7 @@ private fun ExpandedIslandFace(
                     val at = now.at(index)
                     Column(Modifier.fillMaxWidth()) {
                         IslandLine(text = at.previous, fontSize = 10.sp, active = false)
-                        IslandLine(text = at.current, fontSize = 13.sp, active = true)
+                        IslandLine(text = at.current, fontSize = 13.sp, active = true, reveal = reveal)
                         IslandLine(text = at.next, fontSize = 10.sp, active = false)
                     }
                 }
@@ -414,6 +460,7 @@ private fun ExpandedIslandFace(
 private fun CollapsedIslandFace(
     song: Song?,
     now: IslandLines,
+    reveal: Float,
 ) {
     Row(
         Modifier
@@ -468,7 +515,7 @@ private fun CollapsedIslandFace(
                 val at = now.at(index)
                 Column(Modifier.fillMaxWidth()) {
                     IslandLine(text = at.previous, fontSize = 9.sp, active = false)
-                    IslandLine(text = at.current, fontSize = 12.sp, active = true)
+                    IslandLine(text = at.current, fontSize = 12.sp, active = true, reveal = reveal)
                     IslandLine(text = at.next, fontSize = 9.sp, active = false)
                 }
             }
@@ -477,23 +524,56 @@ private fun CollapsedIslandFace(
 }
 
 /**
- * One line of the island's lyric, drawn plainly: no text shadow to blur on every frame.
+ * One line of the island's lyric. The active line is lit by a karaoke sweep:
+ * the sung part stays white, the rest is dim, and the boundary moves with the
+ * playhead. No text shadow — blurring a label on every frame was the expensive
+ * part of an earlier version.
  */
 @Composable
 private fun IslandLine(
     text: String,
     fontSize: TextUnit,
     active: Boolean,
+    reveal: Float = 1f,
     modifier: Modifier = Modifier,
 ) {
+    val value = text.ifBlank { " " }
+    val dim = Color.White.copy(alpha = 0.36f)
+    val style = if (active && text.isNotBlank() && reveal < 0.999f) {
+        val lit = reveal.coerceIn(0f, 1f)
+        // A gradient reads left to right; reverse it for RTL lyrics so the
+        // sweep follows the direction the words are actually written in.
+        val rtl = value.firstOrNull { !it.isWhitespace() }?.let {
+            val direction = Character.getDirectionality(it)
+            direction == Character.DIRECTIONALITY_RIGHT_TO_LEFT ||
+                direction == Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC
+        } ?: false
+        TextStyle(
+            brush = Brush.linearGradient(
+                0f to Color.White,
+                lit to Color.White,
+                lit to dim,
+                1f to dim,
+                start = if (rtl) Offset.Infinite else Offset.Zero,
+                end = if (rtl) Offset.Zero else Offset.Infinite,
+            ),
+            fontSize = fontSize,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
+    } else {
+        TextStyle(
+            color = if (active) Color.White else dim,
+            fontSize = fontSize,
+            fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+            textAlign = TextAlign.Center,
+        )
+    }
     Text(
-        text = text.ifBlank { " " },
-        color = if (active) Color.White else Color.White.copy(alpha = 0.36f),
-        fontSize = fontSize,
-        fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+        text = value,
+        style = style,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        textAlign = TextAlign.Center,
         modifier = modifier.fillMaxWidth(),
     )
 }

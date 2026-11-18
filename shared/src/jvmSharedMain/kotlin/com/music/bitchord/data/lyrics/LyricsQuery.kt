@@ -33,6 +33,22 @@ fun String.forLyricsSearch(): String {
 }
 
 /**
+ * A last-resort query for a recording label YouTube added but no lyrics database
+ * indexed. [forLyricsSearch] deliberately keeps "(Remastered 2011)", "(Live)",
+ * "(Sped Up)" and friends: stripping them on the first ask turns one recording
+ * into another. Once every source has missed, though, the safer bet reverses —
+ * ask for the bare recording and let the source's own duration check reject a
+ * different one. Instrumental and karaoke labels are never removed: a track
+ * with no words should stay that way.
+ */
+fun String.forLyricsSearchRelaxed(): String {
+    val cleaned = forLyricsSearch()
+    val stripped = VERSION_TAG.replace(cleaned, " ")
+    return stripped.replace(WHITESPACE, " ").trim().trimEnd(',', '-', '–', '—').trim()
+        .ifBlank { cleaned }
+}
+
+/**
  * Trims " - Topic" off an auto-generated channel name.
  *
  * YouTube's own artist channels for licensed music are named this way, and it
@@ -42,6 +58,13 @@ fun String.artistForLyricsSearch(): String =
     removeSuffix(" - Topic").trim().ifBlank { trim() }
 
 private val WHITESPACE = Regex("""\s+""")
+
+private val VERSION_TAG = Regex(
+    """\s*[(\[]\s*(?:remaster(?:ed)?(?:\s+\d{4})?|live|acoustic|remix|""" +
+        """sped\s*up|slowed(?:\s*down)?|radio\s*edit|extended\s*mix|edit|version|""" +
+        """explicit|clean)\b[^)\]]*[)\]]""",
+    RegexOption.IGNORE_CASE,
+)
 
 private val CREDITS = listOf(
     // Bracketed credits: (feat. X), [ft. X], (with X).

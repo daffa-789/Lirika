@@ -169,6 +169,46 @@ object LyricsRepository {
                 }
                 if (lineSynced == null) lineSynced = found
             }
+            if (lineSynced == null) {
+                // Every source missed on YouTube's title. Retry only once, with the
+                // recording labels stripped; a wrong recording is far less likely now
+                // than the no-lyrics-at-all the listener just saw. Genius stays out:
+                // a plain-text scrape cannot tell a remaster from the original.
+                val relaxed = searchTitle.forLyricsSearchRelaxed()
+                if (relaxed != searchTitle) {
+                    val retry = sequence.filter { it != LyricsSource.GENIUS }.map { source ->
+                        source to async(Dispatchers.IO) {
+                            onSourceStarted?.invoke(source)
+                            try {
+                                val words = fetch(
+                                    source, videoId, relaxed, searchArtist, durationMs,
+                                    album, null, null, documents::get,
+                                )
+                                val found = words?.let { result(source, it) }
+                                onSourceResult?.invoke(source, found)
+                                found
+                            } catch (cancelled: CancellationException) {
+                                onSourceCancelled?.invoke(source)
+                                throw cancelled
+                            } catch (_: Exception) {
+                                onSourceResult?.invoke(source, null)
+                                null
+                            }
+                        }
+                    }
+                    try {
+                        for ((_, job) in retry) {
+                            val found = job.await() ?: continue
+                            if (found.lines.any { it.isWordSynced }) {
+                                return@coroutineScope found
+                            }
+                            if (lineSynced == null) lineSynced = found
+                        }
+                    } finally {
+                        retry.forEach { it.second.cancel() }
+                    }
+                }
+            }
             lineSynced
         } finally {
             // Whoever lost the race is no longer worth waiting on, and

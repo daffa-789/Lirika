@@ -1533,6 +1533,11 @@ fun BitChordDesktopApp() {
                 if (DesktopIslandState.currentSong.value?.videoId == playing.videoId) {
                     DesktopIslandState.lyricsLines.value = found.lines
                 }
+            }.onFailure { error ->
+                // A silent miss was indistinguishable from a broken provider.
+                DesktopTrackLog.log(
+                    "island lyrics: no lines for ${playing.title} — ${error.message ?: "unknown error"}",
+                )
             }
         }
     }
