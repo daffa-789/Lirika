@@ -3879,7 +3879,7 @@ private fun DesktopTopBar(
                     Image(
                         painter = painterResource(Res.drawable.logo_mark),
                         contentDescription = "Lirika",
-                        modifier = Modifier.size(width = 28.dp, height = 18.dp),
+                        modifier = Modifier.size(22.dp),
                     )
                     Spacer(Modifier.width(12.dp))
                 }
@@ -4029,7 +4029,7 @@ private fun DesktopSidebar(
                 Image(
                     painter = painterResource(Res.drawable.logo_mark),
                     contentDescription = "Lirika",
-                    modifier = Modifier.size(width = 30.dp, height = 20.dp),
+                    modifier = Modifier.size(24.dp),
                 )
                 Spacer(Modifier.width(10.dp))
                 Text(
