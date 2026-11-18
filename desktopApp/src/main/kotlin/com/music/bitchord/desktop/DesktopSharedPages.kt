@@ -51,8 +51,8 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlin.math.roundToInt
 
-// What the phone's pages — Home, Explore, Library, Search, shared from :sharedUi —
-// read from the app around them, answered from this computer's own stores.
+// The desktop pages — Home, Explore, Library, Search — read from the app around
+// them, answered from this computer's own stores.
 
 /** The shared pages' settings and downloads, from the desktop's preferences. */
 internal object DesktopAppUiHost : AppUiHost {

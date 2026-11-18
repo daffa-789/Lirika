@@ -35,15 +35,15 @@ Berdasarkan pengujian pada versi desktop Lirika saat ini:
     java { toolchain { languageVersion.set(JavaLanguageVersion.of(25)) } }
     ```
   - Gradle 9.2.0 adalah versi stabil pertama yang secara resmi menjalankan Gradle dan toolchain di Java 25. Gradle 8.14.x berhenti di Java 24.
-  - **Kompatibilitas:** source desktop dikompilasi ke bytecode 25; target `:shared` Android tetap JVM 17 supaya modul lama tidak berubah. Semua modul jlink yang dipakai packaging masih tersedia di JDK 25.
+  - **Kompatibilitas:** seluruh source dikompilasi ke bytecode 25; tidak ada target `:shared` lain yang memakai JVM 17. Semua modul jlink yang dipakai packaging masih tersedia di JDK 25.
   - **Paket Resmi:** `EclipseAdoptium.Temurin.25.JDK` via Windows Package Manager (`winget`).
 
-### B. IDE & Editor: Antigravity IDE (Tidak Perlu Android Studio)
+### B. IDE & Editor: Antigravity IDE (Tanpa IDE khusus platform)
 * **Antigravity IDE** (berbasis VS Code) adalah lingkungan kerja utama:
   - **Antigravity Tab:** Menyediakan AI autocomplete cerdas, prediksi import otomatis, dan supercomplete di file Kotlin/Compose.
   - **Inline Refactor (<kbd>Ctrl</kbd> + <kbd>I</kbd>):** Generator dan modifikator kode di baris aktif.
   - **Peek Definition (<kbd>Alt</kbd> + <kbd>F12</kbd>):** Melihat implementasi fungsi dan snippet tanpa pindah tab.
-* **Tanpa Android Studio:** Modul desktop berjalan langsung di atas JVM Windows (`./gradlew :desktopApp:run`). Android SDK tidak diperlukan, sehingga menghemat ruang disk dan RAM 4–8 GB.
+* **Tanpa SDK platform tambahan:** modul desktop berjalan langsung di atas JVM Windows (`./gradlew :desktopApp:run`), jadi hanya JDK 25 yang dibutuhkan untuk build.
 
 ---
 
@@ -213,7 +213,7 @@ tidak ada fitur yang memang tidak pernah bisa aktif di mesin ini. Yang dibuang b
 
 - [x] **Automix + transisi DJ** — penyebab terberat di aplikasi:
   - `onnxruntime` **51,9 MB** satu jar, model `beat_this_int8.onnx` (4,5 MB) + `vocals_umxhq_int8.onnx` (9 MB),
-    analyser C++ (`native/analyzer`, `bitchord_analysis.dll`), dan ~2.500 baris Kotlin.
+    analyser C++ dan `bitchord_analysis.dll`, dan ~2.500 baris Kotlin.
   - Butuh inferensi latar belakang saat lagu diputar (thread analisis + ONNX session) — beban CPU yang
     tidak terasa manfaatnya untuk mendengarkan lagu di desktop.
   - Efek transisi echo / beat-roll / reverb / flanger-crush-phaser-vibrato ikut dibuang; **crossfade
@@ -409,7 +409,7 @@ baca catatan rilisnya, lalu publish atau buang draft-nya.
 - [x] **Pangkas native lintas OS (`stripForeignNatives`)**:
   - `desktopApp/build.gradle.kts` dilengkapi task `stripForeignNatives` yang menulis ulang jar fat native
     (`sqlite-jdbc`, `jna`, `quickjs-kt-jvm`, `junixsocket-native-common`) sehingga hanya menyertakan binary
-    arsitektur OS target (Windows x86_64 atau Linux x86_64), membuang binary macOS, FreeBSD, AIX, Android, dll.
+    arsitektur OS target (Windows x86_64 atau Linux x86_64), membuang binary macOS, FreeBSD, AIX, dan arsitektur lain yang tidak dipakai.
   - Runtime classpath menggunakan stripped jar tersebut dan mengecualikan modul fat aslinya.
   - Terbukti berhasil pada Windows dan Linux (`-Pbitchord.target=linux`).
   - Ukuran `lib/` portable Windows terpangkas lagi dari **191 MB ke 172,69 MB** (−18,3 MB).

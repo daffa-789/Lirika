@@ -2,11 +2,10 @@
  * The desktop's own Compose UI — the player, lyrics, queue and the Home /
  * Explore / Library / Search pages.
  *
- * It began as a copy of :sharedUi, which the phone, tablet and TV keep drawing
- * from. The two now move separately: a desktop redesign lands here and never
- * reaches the phone, and the phone's player never moves the desktop's. Packages
- * and the resource class are unchanged from :sharedUi, so the desktop's imports
- * did not move; that is safe only because no module depends on both.
+ * The tree was copied from the original phone UI module, but it is now standalone:
+ * no other module depends on it or shares its sources. The Kotlin package and the
+ * generated resource class still carry the old name so the desktop's imports do
+ * not have to move.
  */
 /** Versions shared with the desktop modules; see the block in gradle.properties. */
 fun property(name: String): String = providers.gradleProperty("bitchord.lib.$name").get()
@@ -62,8 +61,7 @@ kotlin {
     }
 
     sourceSets {
-        // Kept from :sharedUi so the two trees line up file for file; with one
-        // target it is simply the body of jvmMain.
+        // Kept from the original shared tree; with one target it is simply the body of jvmMain.
         val jvmSharedMain by creating {
             dependsOn(commonMain.get())
         }
@@ -104,7 +102,7 @@ kotlin {
 
 compose.resources {
     publicResClass = true
-    // The same class :sharedUi generates, so the desktop's `Res` imports did not move.
+    // Package name kept from the original shared tree so the desktop's Res imports stay stable.
     packageOfResClass = "com.music.bitchord.sharedui.resources"
     generateResClass = always
 }

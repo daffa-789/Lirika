@@ -31,8 +31,8 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Whole-track envelope, structure and key analysis, from the native DSP
- * analyzer (`native/analyzer/audio_analysis.cpp`).
+ * Whole-track envelope, structure and key analysis. The native DSP analyser was
+ * removed with the phone target; the pure-Kotlin DSP fallbacks remain here.
  *
  * This answers "where does the music actually end, where can a transition
  * enter and leave, how loud is it there, and is anyone singing" — the
@@ -72,8 +72,8 @@ object TrackFeatures {
 
     /**
      * Converts mono float PCM from [inputRate] to [sampleRate] (or any other
-     * target), with an anti-aliasing windowed-sinc filter — see
-     * `native/analyzer/resampler.cpp`.
+     * target), with an anti-aliasing windowed-sinc filter — the same design the
+     * former native resampler used.
      *
      * Returns the input unchanged when the rates already match, and null when
      * the native library is missing or the rates are unusable.

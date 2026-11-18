@@ -1,78 +1,64 @@
-# Project: Lirika Kotlin Multiplatform Setup (Desktop-first)
+# Project: Lirika (desktop-only)
 
 ## Architecture
-Lirika is a Kotlin Multiplatform (KMP) music streaming and playback application.
-This fork's default build is **desktop-only**: `:shared`, `:desktopUi`, and `:desktopApp`.
-The phone modules remain in source form as opt-in legacy (`-Pbitchord.android=true`).
-- **`:shared`**: Core multiplatform business logic and models.
-  - `commonMain`: 100% pure Kotlin standard library and DSP math (Models, EqualizerCurve, PeakLimiter, TransitionPlanner). Targets all configured platforms.
-  - `jvmSharedMain`: Shared JVM code used by the desktop (YouTube parsing, InnerTubeX, NewPipeExtractor, lyrics, OkHttp, Jsoup).
-  - Default target: Desktop JVM (`jvm`). `androidTarget()` is applied only when `-Pbitchord.android=true` is passed. The Apple targets were cut — see the iOS row in the README.
-- **`:sharedUi`**: Mobile Compose UI library used by `:app`. Not configured in the default desktop build.
-- **`:desktopUi`**: Desktop-isolated Compose UI library for Windows and Linux.
-- **`:desktopApp`**: Desktop application entry point, native packaging (MSI, EXE, DEB, RPM).
-- **`:app`**: Opt-in legacy Android application module (MainActivity, PlaybackService, Media3, Android widgets, DSD native decoder).
-- **CI Workflows**: GitHub Actions workflows building Windows, Linux, and (opt-in) Android APK.
 
-## Feature Inventory
-| # | Feature | Description | Milestone | Source |
-|---|---------|-------------|-----------|--------|
-| 1 | Multiplatform `:shared` Targets | Configure `androidTarget()` and iOS targets (`iosX64`, `iosArm64`, `iosSimulatorArm64`) with `LirikaShared` XCFramework export in `shared/build.gradle.kts`. **iOS later cut** — the targets and the XCFramework export are gone; `:shared` is Android + JVM. | M1 | Survey (Explorer 2) |
-| 2 | Ktor Multiplatform Client Setup | Keep pure common networking in `commonMain` with `ktor-client-core` and platform engines (`okhttp` for JVM/Android, `darwin` for iOS, `cio` for desktop). | M1 | Survey (Explorer 2) |
-| 3 | Root Build & Settings Setup | Add R8 classpath (`8.13.23`), declare AGP 8.10.1 plugins, add version extra properties, update `gradle.properties`, and configure SDK detection in `settings.gradle.kts`. | M1 | Survey (Explorer 1) |
-| 4 | Restore Historical `:app` Module | Restore `:app` from commit `8b1a112a` without overwriting existing working tree changes. | M1 | Survey (Explorer 1) |
-| 5 | Restore Historical `:sharedUi` Module | Restore `:sharedUi` from commit `8b1a112a` to satisfy `:app` UI dependencies while preserving `desktopUi`. | M1 | Survey (Explorer 1) |
-| 6 | Dead Dependency & Native Cleanup | Clean `CMakeLists.txt` (remove deleted `analyzer`), relocate `WearProtocol.kt` into `app/`, preserve `stripNewPipeExtractorUtils`, and align versions with `gradle.properties`. | M1 | Survey (Explorer 1) |
-| 7 | CI Android Workflow Integration | Add Android build jobs to `.github/workflows/check.yml` (assembleDebug) and `.github/workflows/release.yml` (assembleRelease, APK artifact, SHA256 hashing). | M2 | Survey (Explorer 3) |
-| 8 | CI iOS Workflow Integration | Add iOS build jobs to `.github/workflows/check.yml` (simulator framework link) and `.github/workflows/release.yml` (release XCFramework zip, SHA256 hashing, release aggregation). **Both jobs removed** when iOS was cut. | M2 | Survey (Explorer 3) |
-| 9 | Working Tree & Desktop Preservation | Ensure all 43 uncommitted UI polish modifications are preserved intact and `:desktopApp:compileKotlin` succeeds cleanly. | M3 | Survey (Explorer 3) |
-| 10 | Verification & Forensic Integrity Audit | Complete validation across all targets, CI schema checks, and forensic integrity audit. | M3 | System / Policy |
+Lirika is a Kotlin Multiplatform project whose only remaining target is the JVM desktop client.
+Three modules are configured:
 
-## Milestones
-| # | Name | Scope | Dependencies | Status |
-|---|------|-------|-------------|--------|
-| 1 | Multiplatform Targets & Android Restoration | Configure `:shared` for Android and iOS targets with XCFramework (the iOS half since cut); restore `:app` and `:sharedUi` from `8b1a112a`; clean dead deps in CMakeLists and WearProtocol; configure root `build.gradle.kts`, `settings.gradle.kts`, and `gradle.properties`. | none | DONE |
-| 2 | CI Workflows Integration (Android + iOS) | Update `.github/workflows/check.yml` and `.github/workflows/release.yml` to build and package Android APK and iOS XCFramework (the iOS job since cut). | M1 | DONE |
-| 3 | Verification, Testing & Forensic Integrity Audit | Execute full Gradle task graph verification, desktop compilation, CI schema verification, Challenger empirical testing, and Forensic Integrity Audit. | M1, M2 | DONE |
+- **`:shared`** — pure-Kotlin models, networking, lyrics, playback logic and transition planning.
+  - `commonMain`: models, equalizer, peak limiter, `TransitionPlanner` and other platform-free code.
+  - `jvmSharedMain`: YouTube/InnerTubeX and NewPipe parsing, HTTP stack, lyrics providers and DSP helpers.
+  - JVM target: Java 25.
+- **`:desktopUi`** — the desktop's own Compose UI: player, lyrics, queue, Home, Explore, Library and Search.
+- **`:desktopApp`** — application entry point, tray/island windows, native integrations and packaging
+  (MSI, EXE, portable zip, DEB, RPM, AppImage helper).
 
-## Interface Contracts
-### `:app` ↔ `:shared`
-- `implementation(project(":shared"))`
-- Package: `com.music.bitchord.data.model.*` (Song, HomeShelf, SearchResult, UserPlaylist, QueueTier, etc.)
-- Package: `com.music.bitchord.data.*` (InnertubeParser, YtMusicRepository, SpotifyClient, etc.)
-- Engine: Android runtime uses `androidTarget()` which resolves `jvmSharedMain`.
+CI workflows build the Windows and Linux packages only. There are no AGP plugins, Android SDK/NDK
+requirements, phone modules, or APK artefacts. An earlier phase of this project restored an Android
+client and an iOS target; both were later removed. The Kotlin package name `com.music.bitchord`
+remains as an attribution trail.
 
-### `:app` ↔ `:sharedUi`
-- `implementation(project(":sharedUi"))`
-- Package: `com.music.bitchord.ui.player.NowPlayingScreen`
-- Package: `com.music.bitchord.ui.components.SearchField`
-- Package: `com.music.bitchord.ui.icons.LirikaIcons`
-- Package: `com.music.bitchord.sharedui.resources.Res`
+## Features kept on desktop
+
+- Windows Fluent caption / DWM backdrop and SMTC media keys through small native libraries.
+- Dynamic Island lyrics overlay with tray toggle on Windows and Linux.
+- Tray playback controls, MPRIS on Linux and StatusNotifier integration.
+- YouTube Music-inspired player with restyled Home, Explore, Library and Search, a landscape Now
+  Playing view, and the island as the out-of-window player.
+- Manual crossfade and blend-on-skip; the analyser-driven Automix, its ONNX models and native library
+  are gone.
+- Last.fm scrobbling with user-supplied API credentials.
+- Release manifests (`SHA256SUMS.txt`) generated for every tagged Windows/Linux build.
+
+## Interface contracts
 
 ### `:desktopApp` ↔ `:shared`
-- `implementation(project(":shared"))`
-- JVM variant resolution: `jvm` target variant (`JVM_17`) unchanged.
 
-## Code Layout
-- `shared/` - KMP shared library
-  - `shared/build.gradle.kts`
-  - `shared/src/commonMain/kotlin/`
-  - `shared/src/jvmSharedMain/kotlin/`
-  - `shared/src/commonTest/kotlin/`
-  - `shared/src/jvmTest/kotlin/`
-- `sharedUi/` - Mobile / Multiplatform UI library
-  - `sharedUi/build.gradle.kts`
-  - `sharedUi/src/commonMain/kotlin/`
-  - `sharedUi/src/androidMain/kotlin/`
-- `app/` - Android Application
-  - `app/build.gradle.kts`
-  - `app/src/main/AndroidManifest.xml`
-  - `app/src/main/java/`
-  - `app/src/main/cpp/`
-  - `app/src/main/res/`
-- `desktopApp/` - Desktop Application (Windows, Linux)
-- `desktopUi/` - Desktop UI Library
-- `.github/workflows/` - CI workflows (`check.yml`, `release.yml`)
-- `gradle.properties` - Centralized version properties and flags
-- `settings.gradle.kts` - Gradle project configuration
-- `build.gradle.kts` - Root Gradle buildscript
+- `implementation(project(":shared"))`
+- JVM variant resolution: `jvm` target (Java 25).
+- Key packages: `com.music.bitchord.data.model.*`, `com.music.bitchord.data.*`,
+  `com.music.bitchord.playback.smart.*`.
+
+### `:desktopApp` ↔ `:desktopUi`
+
+- `implementation(project(":desktopUi"))`
+- The UI module keeps the historical resource package `com.music.bitchord.sharedui.resources` so
+  existing `Res` imports stay stable; no other module depends on it.
+
+## Code layout
+
+- `shared/` — shared JVM library (`commonMain`, `jvmSharedMain`, tests)
+- `desktopUi/` — Compose UI library
+- `desktopApp/` — application entry point and packaging tasks
+- `desktopApp/packaging/` — installer and icon assets
+- `.github/workflows/` — `check.yml`, `release.yml` and community workflows
+- `gradle.properties` — shared dependency versions and JVM flags
+- `settings.gradle.kts` — the three JVM modules
+- `build.gradle.kts` — root plugin versions
+
+## Verification
+
+- `./gradlew :desktopApp:test :desktopUi:jvmTest :shared:jvmTest`
+- `./gradlew :desktopApp:windowsPortable` (with a JDK 25 toolchain)
+- CI: `check.yml` compiles/tests on Windows and compiles the Linux target on Ubuntu; `release.yml`
+  publishes Windows and Linux packages on a `v*` tag.

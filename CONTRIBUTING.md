@@ -27,7 +27,7 @@ This tree is the desktop client: Compose Desktop on the JVM, for Windows and Lin
 - **CMake, Ninja and a MinGW C++ compiler** (Windows, optional): they build the native window frame
   (`desktopApp/native/window`) and the SMTC media controls (`desktopApp/native/smtc`). Without them the
   app still builds and runs — it just falls back to Compose's own frameless window and has no media keys.
-- **No Android SDK, no NDK, no party server.** Those belong to the upstream phone build.
+- **No platform SDKs and no party server.** This tree builds desktop packages only.
 
 ## Build and Test Commands
 Run Gradle commands from the repository root.
@@ -78,12 +78,8 @@ A `v*` tag is the release: pushing one runs `.github/workflows/release.yml`, whi
   one that has already been published.
 - The workflow fails rather than shipping a Windows build whose Fluent frame or SMTC DLLs did not compile
   (`require_windows_natives` is the documented override) and re-checks every hash before publishing.
-- Publishing needs the `RELEASE_TOKEN` secret. This repository is a fork, and GitHub rejects every
-  Releases API call made with `GITHUB_TOKEN` from one — create and update both fail with 403 even when the
-  job holds `contents: write`, so the builds all go green and only the last step dies. A fine-grained PAT
-  scoped to this repository with Contents: read+write is enough; the Android APKs additionally need
-  `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` and `KEY_PASSWORD`, without which they ship unsigned
-  and Android refuses to install them.
+- Publishing needs the `RELEASE_TOKEN` secret, a fine-grained PAT scoped to this repository with
+  `Contents: read+write`. Builds use the automatic `GITHUB_TOKEN`; only the release step uses the PAT.
 - Do not put API credentials into a release build. `LASTFM_API_KEY` / `LASTFM_SECRET` reach the launcher as
   plain text, and the launcher is downloaded by strangers.
 - Testing a release without publishing it: run the workflow from the Actions tab with `as_draft: true`.

@@ -31,7 +31,7 @@ package com.music.bitchord.playback.smart
  * rather than to require it; an all-defaults instance is a legitimate input
  * that simply lands on the bottom rung.
  *
- * Phase 1 fills every field from DSP alone (see native/analyzer/), so
+ * Phase 1 fills every field from DSP alone, so
  * [beatConfidence] and [vocalActivityMask] are heuristics rather than a
  * trained model's output — the policy already treats them with the same
  * scrutiny it would a model that failed to load.

@@ -66,13 +66,13 @@ plugins {
 }
 
 dependencies {
-    // jsoup comes in through the NewPipe extractor, as on Android.
+    // jsoup comes in through the NewPipe extractor.
 
     implementation(project(":shared"))
-    // Its own copy of the player and pages; the phone and TV keep :sharedUi.
+    // The desktop's own Compose player and pages.
     implementation(project(":desktopUi"))
-    // BotGuard, for the PoTokens YouTube's web clients need: the phone runs it in an Android
-    // WebView, the desktop in JavaFX's (WebKit). Per-platform jars carry the natives.
+    // BotGuard, for the PoTokens YouTube's web clients need: JavaFX's WebKit runs it here.
+    // Per-platform jars carry the natives.
     // `media` is named here on purpose, like the other four. javafx-web depends on it, but that
     // dependency arrives without the platform classifier, so Gradle hands over the empty
     // `javafx-media` empty classifier jar — two entries, no classes — and the native jar with the actual

@@ -9,10 +9,9 @@
 
 ### Aesthetic YouTube Music Client
 
-**An independent fork of [BitChord](https://github.com/kushagrasinghx/BitChord), modified by Daffa (daffa-789) on 2026-11-17.**
+**Derived from [BitChord](https://github.com/kushagrasinghx/BitChord) by Kushagra Singh, modified by Daffa (daffa-789) on 2026-11-17.**
 
-**Desktop on Windows and Linux — built from this tree.** The upstream Android client is still in
-the repository but is no longer configured by default. [What this fork changes](#this-fork).
+**Desktop only — Windows and Linux, built from this tree.** The phone client has been removed. [What this fork changes](#this-fork).
 
 <br/>
 
@@ -104,17 +103,14 @@ the repository but is no longer configured by default. [What this fork changes](
 
 | Platform | Artefact | How it is verified |
 | --- | --- | --- |
-| Windows 11 | `.msi`, `.exe`, portable `.zip` | compiled on a `windows-latest` runner with the 314-test desktop suite; installers built and launched locally |
+| Windows 11 | `.msi`, `.exe`, portable `.zip` | compiled on a `windows-latest` runner with the desktop test suite; installers built and launched locally |
 | Linux | `.deb`, `.rpm`, `.AppImage` | compiled on `ubuntu-latest`. The `.deb` payload was opened and every one of its 29 shared libraries reads as `x86_64` ELF; the `.rpm` header declares `CPU = x86_64`, `Host OS = linux`. The AppImage is the portable one — it runs from the file, no install. None of the three has been launched on a real Linux desktop |
-| Android (phone · tablet · TV) | `*.apk` | **Opt-in legacy target**, not part of the default desktop build. Enable it with `-Pbitchord.android=true` (plus an Android SDK/NDK); the `:app` task graph then resolves as in upstream, including the NDK `bitchord_analysis` library and APK signing. |
 
 The desktop client is the Compose-for-JVM app. It runs on Windows 11 (Fluent window frame, Dynamic
 Island lyrics, SMTC media keys) and on Linux (MPRIS media controls and the StatusNotifier tray).
 Installers for **this** fork appear on the Releases page of this repository, published by the
 `Release` workflow whenever a `v*` tag is pushed — each release carries a `SHA256SUMS.txt` manifest
-next to the files. Prebuilt APKs of the upstream project live in the
-[Releases](https://github.com/daffa-789/Lirika/releases) page; building from source is one
-clone away:
+next to the files. Building from source is one clone away:
 
 ```bash
 # JDK 25 (Temurin) is required and must be what JAVA_HOME points at.
@@ -130,10 +126,6 @@ clone away:
 ./gradlew :desktopApp:packageRpm
 # the AppImage is the one format Gradle cannot make; the script wraps the app image
 desktopApp/packaging/appimage.sh desktopApp/build/compose/binaries/main/app/Lirika dist/Lirika.AppImage
-
-# Android is opt-in: no phone modules or AGP targets are configured without this flag.
-# Needs an Android SDK (local.properties sdk.dir, or ANDROID_HOME) and the NDK.
-./gradlew :app:assembleDebug -Pbitchord.android=true
 ```
 
 `-Pbitchord.target=linux` picks the Linux native dependencies (FFmpeg/Skiko/JavaFX classifiers)
@@ -151,15 +143,12 @@ What release `v1.8.32` actually published, for reference:
 | `Lirika-1.8.32.msi` / `.exe` | 198 MB each |
 | `Lirika-1.8.32-windows-portable.zip` | 160 MB |
 | `bitchord_1.8.32_amd64.deb` / `bitchord-1.8.32-1.x86_64.rpm` | 189 MB each |
-| `app-prod-{arm64-v8a, armeabi-v7a, x86_64, universal}-release.apk` | 63 / 53 / 69 / 161 MB |
 
 **Publishing** — a tag is the release: `git tag v1.8.33 && git push origin v1.8.33` runs
 [`.github/workflows/release.yml`](.github/workflows/release.yml), which builds the Windows MSI, Exe and
-portable zip on a Windows runner, the `.deb` and `.rpm` on a Linux runner, and the signed `*.apk`
-files on a Linux runner with an Android SDK — then
-publishes all of it as one
-GitHub Release with a `SHA256SUMS.txt` manifest. The tag's patch number becomes the installer version
-code and the APK's `versionCode`, so the packages a release ships are named after the tag. Check a
+portable zip on a Windows runner and the `.deb` and `.rpm` on a Linux runner, then publishes all of
+it as one GitHub Release with a `SHA256SUMS.txt` manifest. The tag's patch number becomes the
+installer version code, so the packages a release ships are named after the tag. Check a
 download before you install it:
 
 ```bash
@@ -176,15 +165,9 @@ Get-Content SHA256SUMS.txt | ForEach-Object {
 Public releases deliberately ship no bundled Last.fm API key — a build that baked one in would write it in
 plain text into the launcher everyone downloads. Scrobbling works anyway: Settings asks for your own key.
 
-**Signing** — the release APK is signed, and the key is the app's identity for good: an APK that is
-already installed can only be updated by one signed with the same key. `keystore.properties.example`
-in the repository root carries the `keytool` command that creates it. The file itself is never
-committed — `*.jks` and `keystore.properties` are ignored by git — and CI takes the key from four
-repository secrets: `KEYSTORE_BASE64` (the `.jks`, base64-encoded), `KEYSTORE_PASSWORD`, `KEY_ALIAS`
-and `KEY_PASSWORD`. Without them the release build still runs, it just produces an unsigned APK that
-Android refuses to install. The publishing step needs a second secret, `RELEASE_TOKEN`: a
-fine-grained PAT scoped to this repository with `Contents: read+write`, because GitHub blocks the
-Releases API for a fork when the workflow uses the automatic `GITHUB_TOKEN`.
+**Publishing token** — the release workflow uses one repository secret, `RELEASE_TOKEN`: a
+fine-grained PAT scoped to this repository with `Contents: read+write`. The builds themselves use
+the automatic `GITHUB_TOKEN`.
 
 </div>
 
@@ -197,19 +180,20 @@ Releases API for a fork when the workflow uses the automatic `GITHUB_TOKEN`.
 </div>
 
 Two decisions shape this tree: the desktop client is trimmed to be a light player rather than
-everything a phone client can do, and whatever the phone genuinely needs stays in `:shared` so one
-tree builds both.
+everything the upstream client could do, and the phone target has been removed entirely — `:shared`
+now serves only the JVM modules.
 
 **Out, and why**
 
 | Removed | Why |
 | --- | --- |
-| Automix / DJ transitions | Out of the **desktop**: `onnxruntime` (51.9 MB), two ONNX models (13.5 MB), the C++ analyser and ~2,500 lines of Kotlin, plus background inference on every track. Manual crossfade (0–12 s) and blend-on-skip stayed. The analyser and those Kotlin types are back in `:shared` and `native/analyzer` because the phone is the one that ships them; the desktop never links `libbitchord_analysis`, so nothing moves there. |
+| Automix / DJ transitions | Out of this tree: `onnxruntime` (51.9 MB), two ONNX models (13.5 MB), the C++ analyser and its native loader, plus background inference on every track. Manual crossfade (0–12 s) and blend-on-skip stayed. The pure-Kotlin transition planner remains in `:shared` because the desktop still uses it for crossfade cues. |
 | GraalVM JS module host | `polyglot` + `js-language` + `truffle` + ICU ≈ 61 MB for a plugin index that has no install UI, whose upstream URL 404s and whose preference nothing in the code read. Addon servers still give FLAC/Hi-Res over plain HTTP. |
-| Listen Together / PartySync / QR invite | Out of the **desktop** UI: it needed a third-party server nobody ever filled in, and the button only ever produced "Set the party server address first". The party models are back in `:shared` because the phone client drives them, and a party still needs a server you point at yourself — upstream's `backend/` is not part of this tree. |
-| Presence telemetry | A "the app is open" ping to the upstream server every ~5 minutes, with no switch in Settings. Out on both clients — the Android application class no longer installs it either. |
+| Listen Together / PartySync / QR invite | Out of the UI: it needed a third-party server nobody ever filled in, and the button only ever produced "Set the party server address first". A party still needs a server you point at yourself — upstream's `backend/` is not part of this tree. |
+| Presence telemetry | A "the app is open" ping to the upstream server every ~5 minutes, with no switch in Settings. Removed. |
 | macOS | Out entirely, and the reason cannot be bought around: an unsigned `.dmg` is stopped by Gatekeeper on first launch — *"BitChord is damaged and cannot be opened"* — and the only way past that is notarisation, which needs a paid Apple Developer account. A build nobody can open on the first try is not a release. The Mac *window* code was already out of this tree (Mac frame, traffic-light caption buttons, Dock listener), so what remained to remove was the packaging itself: `packageDmg`, the `macos-15` runner job, and the Apple-side native classifiers. |
-| iOS | Cut entirely: no Apple targets in `:shared`, no iOS job in CI, no framework in the release. There was never an iPhone client here — the players run on AWT + JNA + FFmpeg + WASAPI, moving them to AVFoundation and UIKit is a rewrite, and the shared layer had no UI to sit on top of it (`:sharedUi`'s `commonMain` was empty). The `:shared` logic stays, because Android and the desktop both build on it. |
+| iOS | Cut entirely: no Apple targets in `:shared`, no iOS job in CI, no framework in the release. The players run on AWT + JNA + FFmpeg + WASAPI; moving them to AVFoundation and UIKit is a rewrite. |
+| Android | Cut entirely with the phone target: no `:app`, no `:sharedUi`, no AGP, no SDK/NDK requirement, and no APK in releases. The package name `com.music.bitchord` is kept only as an attribution trail. |
 
 **In, and what it costs**
 
@@ -230,8 +214,7 @@ tree builds both.
   out of build (the Linux code itself is deliberately kept).
 
 **Measured effect** — the portable `lib/` went from 310 MB to 191 MB (−38 %), the string catalogues
-from 152 KB to 72 KB after deleting the keys nothing referenced, and `:desktopApp:test` runs 323
-tests green. The packaged `Lirika.exe` was launched on this machine to prove the trimmed jlink
+from 152 KB to 72 KB after deleting the keys nothing referenced, and `:desktopApp:test` runs green. The packaged `Lirika.exe` was launched on this machine to prove the trimmed jlink
 runtime is enough for the real app, not just for `:desktopApp:run`.
 
 The working plan, phase by phase, is in [PLAN_WINDOWS.md](PLAN_WINDOWS.md).

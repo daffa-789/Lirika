@@ -30,8 +30,8 @@ jobs:
       - name: Run desktop tests
         run: .\gradlew.bat :desktopApp:test
 
-      # The shared layer is what the phone and the desktop both compile against, and
-      # its own suite never ran here before — so a purge on one side could go unnoticed.
+      # The shared layer is what every desktop module compiles against;
+      # its own suite runs here so a purge cannot go unnoticed.
       - name: Run shared tests
         run: .\gradlew.bat :shared:jvmTest
 
@@ -53,35 +53,3 @@ jobs:
       # audio-watcher code from drifting out of build.
       - name: Compile Kotlin Desktop for Linux
         run: ./gradlew :desktopApp:compileKotlin
-
-  android:
-    name: Android Debug Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Set up JDK 25
-        uses: actions/setup-java@v6
-        with:
-          java-version: '25'
-          distribution: 'temurin'
-
-      - uses: gradle/actions/setup-gradle@v6
-
-      # AGP would otherwise download its default NDK revision during configuration, and that download
-      # fails here with a corrupt archive. Whatever the image already ships is used instead.
-      - name: Find the preinstalled NDK
-        id: ndk
-        run: |
-          set -euo pipefail
-          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:?no Android SDK on this runner}}"
-          ndk="$(ls "$sdk/ndk" 2>/dev/null | sort -V | tail -1)"
-          if [ -z "$ndk" ]; then
-            echo "::error::this runner image carries no NDK under $sdk/ndk"
-            exit 1
-          fi
-          echo "Using NDK $ndk"
-          echo "version=$ndk" >> "$GITHUB_OUTPUT"
-
-      - name: Assemble Android Debug APK
-        run: ./gradlew :app:assembleDebug -Pbitchord.android=true -Pbitchord.ndkVersion=${{ steps.ndk.outputs.version }}

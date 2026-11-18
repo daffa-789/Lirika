@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Copy the desktop has and Android does not: its own window chrome, source editor,
-     output-precision controls and the rest. Android-shared copy lives in en.xml. -->
+<!-- Desktop-only copy: its own window chrome, source editor, output-precision
+     controls and the rest. Copy shared across modules lives in en.xml. -->
 <resources>
     <string name="d_a_slim_bar_above_the_toolbar">A slim bar above the toolbar with the window\'s own buttons. Off, the window has no title bar at all.</string>
     <string name="d_about_artist">About artist</string>
