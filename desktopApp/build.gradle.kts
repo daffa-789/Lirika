@@ -75,18 +75,20 @@ dependencies {
     // WebView, the desktop in JavaFX's (WebKit). Per-platform jars carry the natives.
     // `media` is named here on purpose, like the other four. javafx-web depends on it, but that
     // dependency arrives without the platform classifier, so Gradle hands over the empty
-    // `javafx-media-21.0.10.jar` — two entries, no classes — and the native jar with the actual
+    // `javafx-media` empty classifier jar — two entries, no classes — and the native jar with the actual
     // code is never downloaded. `javafx.scene.web.WebEngine` then dies in its static initialiser
     // with `NoClassDefFoundError: com/sun/media/jfxmedia/events/PlayerStateListener`, on the
     // JavaFX thread, where nothing catches it: the in-app sign-in window never opens, the
     // sign-in spins forever, and BotGuard never produces a token. Naming the module puts the
     // platform jar on the classpath.
+    // JavaFX now follows the JDK's release train, so the desktop client moves with JDK 25.
+    val javafxVersion = "25.0.5.1"
     val javafxClassifier = when (targetOs) {
         "windows" -> "win"
         else -> "linux"
     }
     listOf("base", "graphics", "controls", "media", "web").forEach { module ->
-        implementation("org.openjfx:javafx-$module:21.0.10:$javafxClassifier")
+        implementation("org.openjfx:javafx-$module:$javafxVersion:$javafxClassifier")
     }
 
     // The shared player loads artwork through Coil, as the phone does. This jar is never imported
@@ -423,13 +425,13 @@ tasks.withType<Test> {
 
 kotlin {
     compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_21)
+        jvmTarget.set(JvmTarget.JVM_25)
     }
 }
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
 }
 

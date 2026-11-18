@@ -180,6 +180,10 @@ android {
              * `benchmark` build type below before it ships.
              */
             isMinifyEnabled = true
+            // R8 removes unused classes; this removes unused Android resources (layouts,
+            // drawables, values-* entries) once code references are gone. Compose's
+            // Res.* strings live in the assets tree, so they shrink through R8, not here.
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

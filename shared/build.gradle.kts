@@ -1,5 +1,8 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
+/** JVM target for the desktop client. Android stays on 17; see androidTarget below. */
+val desktopJvmTarget = JvmTarget.JVM_25
+
 /** Versions shared with the desktop modules; see the block in gradle.properties. */
 fun property(name: String): String = providers.gradleProperty("bitchord.lib.$name").get()
 
@@ -7,22 +10,30 @@ val ktor = property("ktor")
 val coroutines = property("coroutines")
 val serialization = property("serialization")
 
+val includeAndroid = providers.gradleProperty("bitchord.android").orNull?.toBoolean() ?: false
+
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
-    id("com.android.library")
+    // Declared here so the version comes from the root build; applied only in the
+    // phone build below, because the plugins {} block cannot see local variables.
+    id("com.android.library") apply false
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+if (includeAndroid) apply(plugin = "com.android.library")
+
 kotlin {
-    androidTarget {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_17)
+    if (includeAndroid) {
+        androidTarget {
+            compilerOptions {
+                jvmTarget.set(JvmTarget.JVM_17)
+            }
         }
     }
 
     jvm {
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_17)
+            jvmTarget.set(desktopJvmTarget)
         }
     }
 
@@ -51,7 +62,9 @@ kotlin {
                 compileOnly("com.microsoft.onnxruntime:onnxruntime:1.20.0")
             }
         }
-        androidMain.get().dependsOn(jvmSharedMain)
+        if (includeAndroid) {
+            androidMain.get().dependsOn(jvmSharedMain)
+        }
         jvmMain.get().dependsOn(jvmSharedMain)
 
         commonMain.dependencies {
@@ -67,7 +80,9 @@ kotlin {
     }
 }
 
-android {
-    namespace = "com.music.bitchord.shared"
-    compileSdk = 36
+if (includeAndroid) {
+    extensions.configure<com.android.build.gradle.LibraryExtension>("android") {
+        namespace = "com.music.bitchord.shared"
+        compileSdk = 36
+    }
 }

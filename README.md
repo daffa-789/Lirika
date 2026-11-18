@@ -11,7 +11,8 @@
 
 **An independent fork of [BitChord](https://github.com/kushagrasinghx/BitChord), modified by Daffa (daffa-789) on 2026-11-17.**
 
-**Desktop on Windows and Linux, and the Android app — all built from this one tree.** [What this fork changes](#this-fork).
+**Desktop on Windows and Linux — built from this tree.** The upstream Android client is still in
+the repository but is no longer configured by default. [What this fork changes](#this-fork).
 
 <br/>
 
@@ -105,7 +106,7 @@
 | --- | --- | --- |
 | Windows 11 | `.msi`, `.exe`, portable `.zip` | compiled on a `windows-latest` runner with the 314-test desktop suite; installers built and launched locally |
 | Linux | `.deb`, `.rpm`, `.AppImage` | compiled on `ubuntu-latest`. The `.deb` payload was opened and every one of its 29 shared libraries reads as `x86_64` ELF; the `.rpm` header declares `CPU = x86_64`, `Host OS = linux`. The AppImage is the portable one — it runs from the file, no install. None of the three has been launched on a real Linux desktop |
-| Android (phone · tablet · TV) | `*.apk` | `:app:assembleDebug` compiles here, including the NDK `bitchord_analysis` library. The release APK is signed — its APK Signing Block carries the v2 scheme and the keystore's own certificate, SHA-256 `A40AEB935F…986C5A` |
+| Android (phone · tablet · TV) | `*.apk` | **Opt-in legacy target**, not part of the default desktop build. Enable it with `-Pbitchord.android=true` (plus an Android SDK/NDK); the `:app` task graph then resolves as in upstream, including the NDK `bitchord_analysis` library and APK signing. |
 
 The desktop client is the Compose-for-JVM app. It runs on Windows 11 (Fluent window frame, Dynamic
 Island lyrics, SMTC media keys) and on Linux (MPRIS media controls and the StatusNotifier tray).
@@ -116,7 +117,7 @@ next to the files. Prebuilt APKs of the upstream project live in the
 clone away:
 
 ```bash
-# JDK 21 (Temurin) is required and must be what JAVA_HOME points at.
+# JDK 25 (Temurin) is required and must be what JAVA_HOME points at.
 # gradle.properties deliberately does NOT pin org.gradle.java.home — that path only exists on one
 # machine, and pinning it breaks the build everywhere else.
 ./gradlew :desktopApp:run                  # run it
@@ -130,8 +131,9 @@ clone away:
 # the AppImage is the one format Gradle cannot make; the script wraps the app image
 desktopApp/packaging/appimage.sh desktopApp/build/compose/binaries/main/app/Lirika dist/Lirika.AppImage
 
-# Android (needs an Android SDK: local.properties sdk.dir, or ANDROID_HOME)
-./gradlew :app:assembleDebug               # the dev+prod flavours, 3 ABIs + universal
+# Android is opt-in: no phone modules or AGP targets are configured without this flag.
+# Needs an Android SDK (local.properties sdk.dir, or ANDROID_HOME) and the NDK.
+./gradlew :app:assembleDebug -Pbitchord.android=true
 ```
 
 `-Pbitchord.target=linux` picks the Linux native dependencies (FFmpeg/Skiko/JavaFX classifiers)

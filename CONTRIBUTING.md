@@ -21,8 +21,9 @@ When contributing:
 
 ## Development Setup
 This tree is the desktop client: Compose Desktop on the JVM, for Windows and Linux. The tools are:
-- **JDK**: Java Development Kit 21 (Eclipse Temurin 21 recommended). `JAVA_HOME` should point at it;
-  the Gradle toolchain asks for 21 and there is no machine-specific path committed to pin it.
+- **JDK**: Java Development Kit 25 (Eclipse Temurin 25 recommended). `JAVA_HOME` should point at it;
+  Gradle also has the Foojay resolver, so a missing JDK 25 toolchain is fetched automatically on a
+  connected machine. No machine-specific path is committed.
 - **CMake, Ninja and a MinGW C++ compiler** (Windows, optional): they build the native window frame
   (`desktopApp/native/window`) and the SMTC media controls (`desktopApp/native/smtc`). Without them the
   app still builds and runs — it just falls back to Compose's own frameless window and has no media keys.

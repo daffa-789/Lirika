@@ -135,10 +135,10 @@ jobs:
         with:
           ref: ${{ needs.meta.outputs.tag }}
 
-      - name: Set up JDK 21
+      - name: Set up JDK 25
         uses: actions/setup-java@v6
         with:
-          java-version: '21'
+          java-version: '25'
           distribution: 'temurin'
 
       - uses: gradle/actions/setup-gradle@v6
@@ -243,10 +243,10 @@ jobs:
         with:
           ref: ${{ needs.meta.outputs.tag }}
 
-      - name: Set up JDK 21
+      - name: Set up JDK 25
         uses: actions/setup-java@v6
         with:
-          java-version: '21'
+          java-version: '25'
           distribution: 'temurin'
 
       - uses: gradle/actions/setup-gradle@v6
@@ -342,10 +342,10 @@ jobs:
         with:
           ref: ${{ needs.meta.outputs.tag }}
 
-      - name: Set up JDK 21
+      - name: Set up JDK 25
         uses: actions/setup-java@v6
         with:
-          java-version: '21'
+          java-version: '25'
           distribution: 'temurin'
 
       - uses: gradle/actions/setup-gradle@v6
@@ -393,6 +393,7 @@ jobs:
       - name: Assemble the prod Release APKs
         run: >
           ./gradlew :app:assembleProdRelease
+          -Pbitchord.android=true
           -Pbitchord.version=${{ needs.meta.outputs.version }}
           -Pbitchord.build=${{ needs.meta.outputs.build }}
           -Pbitchord.ndkVersion=${{ steps.ndk.outputs.version }}
@@ -488,7 +489,7 @@ jobs:
             fi
             echo '- **Windows** — `Lirika-*.msi` for a per-user installer (no admin needed);'
             echo '  `Lirika-*.exe` is the same installer as a single file; `*-windows-portable.zip`'
-            echo '  installs nothing but expects a Java 21+ runtime on `PATH` or in `JAVA_HOME`.'
+            echo '  installs nothing but expects a Java 25+ runtime on `PATH` or in `JAVA_HOME`.'
             echo '- **Linux** — `*.deb` for Debian/Ubuntu/SteamOS, `*.rpm` for Fedora/openSUSE/RHEL,'
             echo '  and `*.AppImage` to run straight from the file without installing anything.'
             echo

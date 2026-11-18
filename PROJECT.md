@@ -1,16 +1,18 @@
-# Project: Lirika Kotlin Multiplatform Setup (Android + Desktop)
+# Project: Lirika Kotlin Multiplatform Setup (Desktop-first)
 
 ## Architecture
 Lirika is a Kotlin Multiplatform (KMP) music streaming and playback application.
+This fork's default build is **desktop-only**: `:shared`, `:desktopUi`, and `:desktopApp`.
+The phone modules remain in source form as opt-in legacy (`-Pbitchord.android=true`).
 - **`:shared`**: Core multiplatform business logic and models.
-  - `commonMain`: 100% pure Kotlin standard library and DSP math (Models, EqualizerCurve, PeakLimiter, TransitionPlanner). Targets all platforms.
-  - `jvmSharedMain`: Shared JVM code for Desktop and Android (YouTube parsing, InnerTubeX, NewPipeExtractor, lyrics, OkHttp, Jsoup).
-  - Target platforms: Desktop JVM (`jvm`) and Android (`androidTarget()`). The Apple targets were cut — see the iOS row in the README.
-- **`:sharedUi`**: Mobile/multiplatform Compose UI library used by `:app` (Android) and future mobile clients.
+  - `commonMain`: 100% pure Kotlin standard library and DSP math (Models, EqualizerCurve, PeakLimiter, TransitionPlanner). Targets all configured platforms.
+  - `jvmSharedMain`: Shared JVM code used by the desktop (YouTube parsing, InnerTubeX, NewPipeExtractor, lyrics, OkHttp, Jsoup).
+  - Default target: Desktop JVM (`jvm`). `androidTarget()` is applied only when `-Pbitchord.android=true` is passed. The Apple targets were cut — see the iOS row in the README.
+- **`:sharedUi`**: Mobile Compose UI library used by `:app`. Not configured in the default desktop build.
 - **`:desktopUi`**: Desktop-isolated Compose UI library for Windows and Linux.
 - **`:desktopApp`**: Desktop application entry point, native packaging (MSI, EXE, DEB, RPM).
-- **`:app`**: Android application module (MainActivity, PlaybackService, Media3, Android widgets, DSD native decoder).
-- **CI Workflows**: GitHub Actions workflows building Windows, Linux, and Android (APK).
+- **`:app`**: Opt-in legacy Android application module (MainActivity, PlaybackService, Media3, Android widgets, DSD native decoder).
+- **CI Workflows**: GitHub Actions workflows building Windows, Linux, and (opt-in) Android APK.
 
 ## Feature Inventory
 | # | Feature | Description | Milestone | Source |

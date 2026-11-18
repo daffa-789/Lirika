@@ -5,13 +5,11 @@ buildscript {
     }
     dependencies {
         /*
-         * Overrides the D8/R8 that AGP 8.10.1 bundles (8.10.9). Gradle's conflict
-         * resolution picks the higher version, so this is the whole mechanism.
-         *
-         * 8.10.x miscompiles `NowPlayingScreen`, which is large enough — 36
-         * parameters, ~5,500 dex instructions, registers past v287 — to hit a
-         * register-allocation bug in debug-mode dexing.
-         * R8 8.13.23 fixes the register allocation bug and reads Kotlin 2.3 @Metadata.
+         * Overrides the D8/R8 that AGP bundles. The override was introduced when
+         * AGP 8.10.9's R8 miscompiled NowPlayingScreen (36 parameters, ~5,500 dex
+         * instructions, registers past v287). R8 8.13.23 fixed that register
+         * allocation bug and reads Kotlin 2.3 @Metadata; keep it while the phone
+         * build is still in the tree, even though the desktop build never runs D8.
          */
         classpath("com.android.tools:r8:8.13.23")
     }
@@ -22,8 +20,8 @@ extra["bitchordVersionName"] = "1.8.33"
 extra["bitchordBetaSuffix"] = ""
 
 plugins {
-    id("com.android.application") version "8.10.1" apply false
-    id("com.android.library") version "8.10.1" apply false
+    id("com.android.application") version "8.13.2" apply false
+    id("com.android.library") version "8.13.2" apply false
     id("org.jetbrains.kotlin.android") version "2.3.20" apply false
     id("org.jetbrains.kotlin.multiplatform") version "2.3.20" apply false
     id("org.jetbrains.kotlin.jvm") version "2.3.20" apply false

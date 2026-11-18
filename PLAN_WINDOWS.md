@@ -27,15 +27,16 @@ Berdasarkan pengujian pada versi desktop Lirika saat ini:
 
 ## 2. Keputusan Arsitektur & Lingkungan Pengembangan (Development Stack)
 
-### A. Runtime & Toolchain: Mengapa Wajib JDK 21?
-* **Java Development Kit (JDK 21):**
-  - Modul desktop Lirika (`desktopApp/build.gradle.kts`) secara eksplisit mengunci target toolchain ke Java 21:
+### A. Runtime & Toolchain: Mengapa Wajib JDK 25?
+* **Java Development Kit (JDK 25):**
+  - Modul desktop Lirika (`desktopApp/build.gradle.kts`) secara eksplisit mengunci target toolchain ke Java 25:
     ```kotlin
-    kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_21) } }
-    java { toolchain { languageVersion.set(JavaLanguageVersion.of(21)) } }
+    kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_25) } }
+    java { toolchain { languageVersion.set(JavaLanguageVersion.of(25)) } }
     ```
-  - **Mengapa bukan JDK 17?** Gradle akan menolak kompilasi jika JDK yang terpasang hanya versi 17 karena requirement toolchain versi 21. Sebaliknya, JDK 21 sepenuhnya *backward compatible* (bisa mengompilasi modul shared/Android bertarget Java 17).
-  - **Paket Resmi:** `EclipseAdoptium.Temurin.21.JDK` via Windows Package Manager (`winget`).
+  - Gradle 9.2.0 adalah versi stabil pertama yang secara resmi menjalankan Gradle dan toolchain di Java 25. Gradle 8.14.x berhenti di Java 24.
+  - **Kompatibilitas:** source desktop dikompilasi ke bytecode 25; target `:shared` Android tetap JVM 17 supaya modul lama tidak berubah. Semua modul jlink yang dipakai packaging masih tersedia di JDK 25.
+  - **Paket Resmi:** `EclipseAdoptium.Temurin.25.JDK` via Windows Package Manager (`winget`).
 
 ### B. IDE & Editor: Antigravity IDE (Tidak Perlu Android Studio)
 * **Antigravity IDE** (berbasis VS Code) adalah lingkungan kerja utama:
@@ -119,7 +120,7 @@ if (isFloatingLyricsEnabled) {
 
 ```mermaid
 flowchart TD
-    Fase1["Fase 1: Setup Lingkungan (JDK 21 & Restore Modul)"] --> Fase2["Fase 2: Windows 11 Native Frame & Test Run"]
+    Fase1["Fase 1: Setup Lingkungan (JDK 25 & Restore Modul)"] --> Fase2["Fase 2: Windows 11 Native Frame & Test Run"]
     Fase2 --> Fase3["Fase 3: Jendela Floating Lyrics & State Binding"]
     Fase3 --> Fase4["Fase 4: 4 Gaya Animasi & Click-Through"]
     Fase4 --> Fase5["Fase 5: Menu Dynamic Island & Polish"]
@@ -132,7 +133,7 @@ flowchart TD
 ### Rincian Checklist:
 
 #### Fase 1: Setup Lingkungan & Restore Modul Desktop
-- [x] Install JDK 21 via `winget install EclipseAdoptium.Temurin.21.JDK`.
+- [x] Install JDK 25 via `winget install EclipseAdoptium.Temurin.25.JDK`.
 - [x] Verifikasi ketersediaan perintah `java -version` dan `javac -version`.
 - [x] Restore folder `desktopApp` dan `desktopUi` dari riwayat commit git `e4dd63d8^1`.
 - [x] Daftarkan kembali `include(":desktopApp")` di [settings.gradle.kts](file:///c:/Users/Daffa/Desktop/Folder Space AI/Folder Space Semester 7/Bit Chord/settings.gradle.kts).
