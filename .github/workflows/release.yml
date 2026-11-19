@@ -369,10 +369,8 @@ jobs:
             echo '## Notes'
             echo
             echo '- The Windows packages carry the Fluent window frame and SMTC media keys.'
-            echo '- Sign in through the in-app WebView, or import the session from Chrome/Edge/Brave/Firefox.'
-            echo '- Last.fm scrobbling works, but a public build deliberately ships no bundled API key: the'
-            echo '  Settings page asks for your own Last.fm key and secret. Those belong in your install, not'
-            echo '  in a downloadable archive.'
+            echo '- Sign in with Google in the app to use YouTube Music.'
+            echo '- Play supported YouTube video links and use available captions as fallback lyrics.'
           } > /tmp/RELEASE_NOTES.md
           cat /tmp/RELEASE_NOTES.md
 
