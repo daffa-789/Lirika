@@ -823,15 +823,15 @@ compose.desktop {
             vendor = "Lirika contributors"
             copyright = "Copyright © 2026 Lirika contributors"
 
+            // Deliberately minimal: jlink expands this list through module dependencies. Naming
+            // java.instrument/management/naming/prefs, jdk.security.auth and jdk.zipfs explicitly
+            // used to widen the runtime to 22 modules; the 14 below still cover sign-in, SQLite,
+            // JavaFX WebEngine and JavaCPP, and save about 2 MB per installer.
             modules(
                 "java.base",
                 "java.desktop",
-                "java.instrument",
                 "java.logging",
-                "java.management",
-                "java.naming",
                 "java.net.http",
-                "java.prefs",
                 "java.sql",
                 "java.xml",
                 "jdk.crypto.ec",
@@ -839,10 +839,10 @@ compose.desktop {
                 // Without this module the slim production runtime crashes in twkExecuteScript,
                 // while development runs work because the full JDK already contains it.
                 "jdk.jsobject",
+                // Locale catalogues are loaded at runtime for the app's 23 UI languages.
                 "jdk.localedata",
-                "jdk.security.auth",
+                // JavaCPP and Skiko reach the Unsafe APIs through this module.
                 "jdk.unsupported",
-                "jdk.zipfs",
             )
 
             linux {

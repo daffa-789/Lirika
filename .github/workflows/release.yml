@@ -1,6 +1,6 @@
 name: Release
 
-# A tag is the release. Pushing `v1.8.34` builds the Windows and Linux packages and
+# A tag is the release. Pushing `v1.8.35` builds the Windows and Linux packages and
 # publishes them with a SHA-256 manifest. `workflow_dispatch` rebuilds a tag that already
 # exists — after a runner hiccup, or as a draft to read the notes before publishing.
 #
