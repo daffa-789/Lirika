@@ -1,17 +1,11 @@
 name: Release
 
-# A tag is the release. Pushing `v1.8.33` builds the Windows and Linux packages and
+# A tag is the release. Pushing `v1.8.34` builds the Windows and Linux packages and
 # publishes them with a SHA-256 manifest. `workflow_dispatch` rebuilds a tag that already
 # exists — after a runner hiccup, or as a draft to read the notes before publishing.
 #
-# Requires the RELEASE_TOKEN secret (a fine-grained PAT with Contents: read+write on this repo): the
-# publish step cannot use GITHUB_TOKEN, because GitHub blocks the Releases API for forks.
-#
-# The token in place today ("Lirika Release Token") expires on 10 November 2027. When it does, the
-# Publish step fails with a permission error that does not name the token, so rotate it before then:
-# make a new fine-grained PAT scoped to this repository with Contents: read+write, replace the
-# secret, and only then delete the old one. A token without an expiry date would remove the chore
-# but not the risk, so the expiry is deliberate.
+# This repository is standalone, so the built-in GITHUB_TOKEN has Contents: write on the
+# Releases API. No personal access token or repository secret is needed to publish.
 #
 # Version rule: the tag without its leading `v` is the app version, and its patch component doubles as
 # the desktop version code (`desktopVersionCode` in desktopApp/build.gradle.kts), so the installer's
@@ -95,30 +89,9 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "tag=${tag} version=${version} build=${build} prerelease=${prerelease}"
 
-  # Everything the release needs, checked before a single package is built.
-  # A missing secret used to surface only after fifteen minutes of building,
-  # in the one step that could not do anything about it.
-  preflight:
-    name: Preflight
-    needs: meta
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Check the repository secret the release needs
-        env:
-          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ -z "$RELEASE_TOKEN" ]; then
-            echo "::error::missing repository secret: RELEASE_TOKEN"
-            echo "Add it under Settings > Secrets and variables > Actions."
-            exit 1
-          fi
-          echo "RELEASE_TOKEN is present"
-
   windows:
     name: Windows packages
-    needs: [meta, preflight]
+    needs: meta
     runs-on: windows-latest
     timeout-minutes: 60
     steps:
@@ -226,7 +199,7 @@ jobs:
 
   linux:
     name: Linux packages
-    needs: [meta, preflight]
+    needs: meta
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -322,7 +295,7 @@ jobs:
 
   release:
     name: Publish
-    needs: [meta, preflight, windows, linux]
+    needs: [meta, windows, linux]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -405,9 +378,8 @@ jobs:
 
       - uses: softprops/action-gh-release@v3
         with:
-          # A personal token keeps publishing independent of the workflow token's contents permissions.
-          # Only this step needs it; the builds stay on the default token.
-          token: ${{ secrets.RELEASE_TOKEN }}
+          # Standalone repo: the workflow token has contents: write on this job, so no PAT is needed.
+          token: ${{ github.token }}
           tag_name: ${{ needs.meta.outputs.tag }}
           target_commitish: ${{ needs.meta.outputs.sha }}
           name: Lirika ${{ needs.meta.outputs.version }}

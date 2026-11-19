@@ -165,9 +165,8 @@ Get-Content SHA256SUMS.txt | ForEach-Object {
 Public releases deliberately ship no bundled Last.fm API key — a build that baked one in would write it in
 plain text into the launcher everyone downloads. Scrobbling works anyway: Settings asks for your own key.
 
-**Publishing token** — the release workflow uses one repository secret, `RELEASE_TOKEN`: a
-fine-grained PAT scoped to this repository with `Contents: read+write`. The builds themselves use
-the automatic `GITHUB_TOKEN`.
+**Publishing** — the release workflow uses the built-in `GITHUB_TOKEN` with `Contents: write`; no
+personal access token or repository secret is needed on this standalone repository.
 
 </div>
 

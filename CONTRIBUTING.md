@@ -78,8 +78,8 @@ A `v*` tag is the release: pushing one runs `.github/workflows/release.yml`, whi
   one that has already been published.
 - The workflow fails rather than shipping a Windows build whose Fluent frame or SMTC DLLs did not compile
   (`require_windows_natives` is the documented override) and re-checks every hash before publishing.
-- Publishing needs the `RELEASE_TOKEN` secret, a fine-grained PAT scoped to this repository with
-  `Contents: read+write`. Builds use the automatic `GITHUB_TOKEN`; only the release step uses the PAT.
+- Publishing uses the workflow's built-in `GITHUB_TOKEN` with `Contents: write`; no extra secret is
+  needed on this standalone repository.
 - Do not put API credentials into a release build. `LASTFM_API_KEY` / `LASTFM_SECRET` reach the launcher as
   plain text, and the launcher is downloaded by strangers.
 - Testing a release without publishing it: run the workflow from the Actions tab with `as_draft: true`.
