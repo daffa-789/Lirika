@@ -23,7 +23,7 @@ val targetOs: String = (providers.gradleProperty("bitchord.target").orNull ?: wh
 // Windows installer metadata requires MAJOR.MINOR.BUILD even though the app's public version is
 // intentionally displayed without a patch number (1.7 rather than 1.7.0).
 // The build number is the desktop version code; it also keeps "-beta1" out of the numeric installer version.
-// Release tags carry it — `v1.8.33` builds 1.8.33 — so CI names the packages after what it tagged. A
+// Release tags carry it — `v1.8.36` builds 1.8.36 — so CI names the packages after what it tagged. A
 // plain checkout keeps the code below, which is what an installer already on a machine compares against
 // when it decides whether this is an upgrade.
 val desktopVersionCode: Int = providers.gradleProperty("bitchord.build").orNull
@@ -102,14 +102,15 @@ dependencies {
     implementation("org.bytedeco:ffmpeg:$ffmpegVersion")
     implementation("org.bytedeco:ffmpeg:$ffmpegVersion:$nativeClassifier")
 
-    // Both targets now ship Compose 1.12.2 with Haze 1.7.3, the pairing that matches
-    // the 1.12 ShaderBrush ABI. Haze 1.7.2 belonged to the old Windows 1.10.3 graph.
+    // Both targets ship Compose 1.12.2 with Haze 2.1.0, the pairing that matches
+    // the 1.12 ShaderBrush ABI and Kotlin 2.4.21.
     val haze = when (targetOs) {
         "windows" -> property("haze.windows")
         else -> property("haze.linux")
     }
     implementation("dev.chrisbanes.haze:haze:$haze")
-    implementation("dev.chrisbanes.haze:haze-materials:$haze")
+    implementation("dev.chrisbanes.haze:haze-blur:$haze")
+    implementation("dev.chrisbanes.haze:haze-blur-materials:$haze")
 
     implementation(compose.runtime)
     implementation(compose.foundation)
@@ -125,7 +126,7 @@ dependencies {
     )
 
     // The engine the scrobbler, the JioSaavn client and the addon HTTP calls run on. Same version as
-    // :shared, whose ktor 3.5.2 these used to be mixed with on one classpath.
+    // :shared, whose ktor version these used to be mixed with on one classpath.
     implementation("io.ktor:ktor-client-core:$ktor")
     implementation("io.ktor:ktor-client-cio:$ktor")
     implementation("io.ktor:ktor-client-content-negotiation:$ktor")

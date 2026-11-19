@@ -32,9 +32,8 @@ val cmp = when (targetOs) {
     else -> property("compose.linux")
 }
 
-// Haze 1.7.3 is the build that matches Compose 1.12's ShaderBrush ABI; Haze 1.7.2
-// was pinned to the pre-1.12 createShader return type and crashed every blur with
-// NoSuchMethodError. Both desktop platforms now use the same pair.
+// Haze 2.1.0 is built against Compose 1.12's ShaderBrush ABI and Kotlin 2.4.21; older
+// Haze 1.7.x was pinned to the previous Kotlin/Compose pair. Both platforms use this pair.
 val haze = when (targetOs) {
     "windows" -> property("haze.windows")
     else -> property("haze.linux")
@@ -83,7 +82,9 @@ kotlin {
             api("org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose:2.9.6")
             api("io.coil-kt.coil3:coil-compose:${property("coil")}")
             api("dev.chrisbanes.haze:haze:$haze")
-            api("dev.chrisbanes.haze:haze-materials:$haze")
+            // Haze 2 split Blur into its own artifact and renamed the materials module.
+            api("dev.chrisbanes.haze:haze-blur:$haze")
+            api("dev.chrisbanes.haze:haze-blur-materials:$haze")
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${property("coroutines")}")
             // collectAsStateWithLifecycle hops onto Dispatchers.Main, and Compose Desktop bundles no
             // Main dispatcher: without this every lifecycle collector threw on startup.

@@ -144,7 +144,7 @@ What release `v1.8.32` actually published, for reference:
 | `Lirika-1.8.32-windows-portable.zip` | 160 MB |
 | `bitchord_1.8.32_amd64.deb` / `bitchord-1.8.32-1.x86_64.rpm` | 189 MB each |
 
-**Publishing** — a tag is the release: `git tag v1.8.33 && git push origin v1.8.33` runs
+**Publishing** — a tag is the release: `git tag v1.8.36 && git push origin v1.8.36` runs
 [`.github/workflows/release.yml`](.github/workflows/release.yml), which builds the Windows MSI, Exe and
 portable zip on a Windows runner and the `.deb` and `.rpm` on a Linux runner, then publishes all of
 it as one GitHub Release with a `SHA256SUMS.txt` manifest. The tag's patch number becomes the

@@ -164,13 +164,12 @@ import com.music.bitchord.data.model.PlaybackSourceType
 import com.music.bitchord.data.model.PLAYER_ART_PX
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.playback.BACK_RESTARTS_AFTER_MS
-import dev.chrisbanes.haze.HazeInputScale
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.HazePerformanceMode
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.ExperimentalHazeApi
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.HazeColorEffect
 import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -643,7 +642,6 @@ private fun SlidingPlayerDeck(
  * queue along the bottom.
  */
 @Composable
-@OptIn(ExperimentalHazeApi::class, ExperimentalHazeMaterialsApi::class)
 fun NowPlayingScreen(
     song: Song,
     /** Who selected this track in the active Listen Together session. */
@@ -2385,33 +2383,32 @@ fun NowPlayingScreen(
                                 } else {
                                     Modifier.optimizedHazeEffect(
                                         state = playerHaze,
-                                        // Do not use HazeMaterials with Transparent:
+                                        // Do not use a material preset with Transparent:
                                         // that preset treats transparent RGB as black
-                                        // and replaces its alpha with a dark 0.8 tint.
-                                        style = HazeStyle(
-                                            backgroundColor = Color.Transparent,
-                                            tints = emptyList(),
+                                        // and replaces its alpha with a dark tint.
+                                        style = HazeBlurStyle {
+                                            backgroundColor(Color.Transparent)
+                                            colorEffects(emptyList())
                                             // Canvas stays sharp above the deck; the
                                             // lower glass needs stronger separation
                                             // from a moving video than static artwork.
-                                            blurRadius = 48.dp,
-                                            noiseFactor = 0f,
-                                            fallbackTint = HazeTint(Color.Transparent),
-                                        ),
-                                    ) {
-                                        // This is a continuously changing video, so a
-                                        // full third-resolution backdrop is still more
-                                        // detail than a 48dp blur can preserve. At 18%
-                                        // this processes roughly 30% of the pixels used
-                                        // by optimizedHazeEffect's normal 33% path.
-                                        inputScale = HazeInputScale.Fixed(0.18f)
-                                        canDrawArea = { true }
-                                        mask = Brush.verticalGradient(
-                                            0.00f to Color.Transparent,
-                                            SPOTIFY_DECK_TOP_FADE_FRACTION to Color.Black,
-                                            1.00f to Color.Black,
-                                        )
-                                    }
+                                            blurRadius(48.dp)
+                                            noiseFactor(0f)
+                                            fallbackColorEffect(HazeColorEffect.tint(Color.Transparent))
+                                            mask(
+                                                Brush.verticalGradient(
+                                                    0.00f to Color.Transparent,
+                                                    SPOTIFY_DECK_TOP_FADE_FRACTION to Color.Black,
+                                                    1.00f to Color.Black,
+                                                ),
+                                            )
+                                        },
+                                        // This is a continuously changing video, so a full
+                                        // balanced-resolution backdrop is still more detail
+                                        // than a 48dp blur can preserve. At 18% this processes
+                                        // roughly 30% of the pixels used by the normal 33% path.
+                                        performanceMode = HazePerformanceMode.Fixed(0.18f),
+                                    )
                                 },
                             ),
                     )

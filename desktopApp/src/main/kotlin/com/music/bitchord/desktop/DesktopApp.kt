@@ -247,8 +247,10 @@ import com.music.bitchord.sharedui.resources.spotify_logo
 import com.music.bitchord.data.model.withoutRepeatsOf
 import com.music.bitchord.ui.icons.BitChordIcons
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.HazeColorEffect
+import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.hazeSource
 import java.util.UUID
 import kotlin.math.roundToInt
@@ -6667,20 +6669,20 @@ private fun Modifier.desktopFrosted(
         return this.background(edge.dissolve(opaque, fade) ?: SolidColor(opaque))
     }
     val dissolve = edge.dissolve(Color.Black, fade)
-    return this.hazeEffect(state = haze) {
-        // Spelled out rather than taken from a preset.
-        blurEnabled = true
-        backgroundColor = DesktopSurface
-        blurRadius = 30.dp
+    val style = HazeBlurStyle {
+        blurEnabled(true)
+        backgroundColor(DesktopSurface)
+        blurRadius(30.dp)
         // Dark enough that white text on the pane always wins, translucent enough that the
         // colour of what is behind it still comes through.
-        tints = listOf(HazeTint(DesktopSurface.copy(alpha = tintAlpha)))
-        noiseFactor = 0.04f
+        colorEffects(listOf(HazeColorEffect.tint(DesktopSurface.copy(alpha = tintAlpha))))
+        noiseFactor(0.04f)
         // Assigned either way: the scope belongs to the node and outlives the draw, so a pane that
         // stops dissolving — the leading stretch of the top bar, when the window grows back out of
         // compact — would otherwise keep the mask it was given in the other layout.
-        mask = dissolve
+        mask(dissolve)
     }
+    return this.hazeBlur(input = HazeInput.Sources(haze), style = style)
 }
 
 /** The gradient that takes [colour] to nothing across the pane's last [fade]. */

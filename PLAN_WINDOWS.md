@@ -34,7 +34,7 @@ Berdasarkan pengujian pada versi desktop Lirika saat ini:
     kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_25) } }
     java { toolchain { languageVersion.set(JavaLanguageVersion.of(25)) } }
     ```
-  - Gradle 9.2.0 adalah versi stabil pertama yang secara resmi menjalankan Gradle dan toolchain di Java 25. Gradle 8.14.x berhenti di Java 24.
+  - Gradle 9.7.0 adalah versi terbaru yang masih didukung resmi oleh Kotlin 2.4.21 dan menjalankan Gradle serta toolchain di Java 25. Gradle 9.8+ membuka dukungan Java 27, tetapi proyek ini tetap di Java 25 LTS.
   - **Kompatibilitas:** seluruh source dikompilasi ke bytecode 25; tidak ada target `:shared` lain yang memakai JVM 17. Semua modul jlink yang dipakai packaging masih tersedia di JDK 25.
   - **Paket Resmi:** `EclipseAdoptium.Temurin.25.JDK` via Windows Package Manager (`winget`).
 
