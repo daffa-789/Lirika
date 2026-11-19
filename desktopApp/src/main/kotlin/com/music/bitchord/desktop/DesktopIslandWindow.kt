@@ -117,7 +117,6 @@ internal fun DesktopIslandWindow() {
     val isPlaying by DesktopIslandState.isPlaying.collectAsState()
     val lines by DesktopIslandState.lyricsLines.collectAsState()
     val repeatMode by DesktopIslandState.repeatMode.collectAsState()
-    val lyricsOffsetMs by DesktopPlayerSettings.lyricsOffsetMs.collectAsState()
 
     var menuOpen by remember { mutableStateOf(false) }
     // True while the pointer is down on the scrub bar, so the same drag scrubs the song.
@@ -305,7 +304,6 @@ internal fun DesktopIslandWindow() {
                         lines = lines,
                         positionMs = { DesktopIslandState.currentPositionMs.value },
                         durationMs = { DesktopIslandState.durationMs.value },
-                        lyricsOffsetMs = { lyricsOffsetMs },
                         isPlaying = isPlaying,
                         repeatMode = repeatMode,
                         scale = scale,
