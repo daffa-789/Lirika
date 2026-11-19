@@ -4,18 +4,7 @@ import java.text.Normalizer
 import java.util.Locale
 
 /**
- * Which provider a clip came from — read in one place, by
- * [CanvasArtworkPlayer][com.music.bitchord.ui.player.CanvasArtworkPlayer]'s
- * caller, to decide whether the backdrop should keep re-tinting itself off
- * the clip as it loops rather than settling on its first frame. See that
- * call site for why Spotify's Canvas gets the periodic re-tint and the other
- * three don't.
- */
-enum class CanvasSource { SPOTIFY, OTHER }
-
-/**
- * A looping video that stands in for a track's cover art — what Spotify calls
- * a Canvas and Apple calls motion artwork.
+ * A looping video that complements a track's cover art.
  *
  * [url] is what the player mounts; [fallbackUrl] is tried once if that errors,
  * which is how the Apple provider hands over a second rendition of the same
@@ -29,7 +18,6 @@ data class CanvasArtwork(
     val title: String? = null,
     val artist: String? = null,
     val album: String? = null,
-    val source: CanvasSource = CanvasSource.OTHER,
 ) {
     /**
      * Whether this clip really belongs to the track we asked about.

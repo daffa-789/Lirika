@@ -38,17 +38,28 @@ object YouTubeMusicLyrics {
 object YouTubeTranscriptLyrics {
     suspend fun lyrics(videoId: String): List<LyricLine>? = withContext(Dispatchers.IO) {
         if (!YOUTUBE_ID.matches(videoId)) return@withContext null
-        val response = runCatching { Innertube.transcript(videoId) }.getOrNull()
-            ?: return@withContext null
-        response.objectsNamed("transcriptCueRenderer").mapNotNull { cue ->
-            val start = (cue["startOffsetMs"] as? JsonPrimitive)?.longOrNull
-                ?: return@mapNotNull null
-            val text = cue["cue"]?.youtubeStrings()?.joinToString("").orEmpty()
-                .trim(' ', '\n', '♪')
-            text.takeIf { it.isNotEmpty() }?.let { LyricLine(start, it) }
-        }.sortedBy { it.timeMs }.toList().takeIf { it.isNotEmpty() }
+        val musicLines = runCatching { parseTranscriptLines(Innertube.transcript(videoId)) }
+            .getOrDefault(emptyList())
+        if (musicLines.isNotEmpty()) return@withContext musicLines
+
+        val webLines = runCatching { parseTranscriptLines(Innertube.transcriptWeb(videoId)) }
+            .getOrDefault(emptyList())
+        (musicLines + webLines)
+            .distinctBy { it.timeMs to it.text }
+            .sortedBy { it.timeMs }
+            .takeIf { it.isNotEmpty() }
     }
 }
+
+/** Parses timed transcript cues from either the Music or regular YouTube response. */
+internal fun parseTranscriptLines(response: JsonObject): List<LyricLine> =
+    response.objectsNamed("transcriptCueRenderer").mapNotNull { cue ->
+        val start = (cue["startOffsetMs"] as? JsonPrimitive)?.longOrNull
+            ?: return@mapNotNull null
+        val text = cue["cue"]?.youtubeStrings()?.joinToString("").orEmpty()
+            .trim(' ', '\n', '♪')
+        text.takeIf { it.isNotEmpty() }?.let { LyricLine(start, it) }
+    }.sortedBy { it.timeMs }.toList()
 
 private val YOUTUBE_ID = Regex("""[A-Za-z0-9_-]{11}""")
 

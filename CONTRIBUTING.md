@@ -64,9 +64,7 @@ run there is not a CI failure.
 - Write unit tests for new logic, fixes, and edge cases.
 - Contributors should run relevant tests, must not introduce new failures, and should document known pre-existing failures when applicable.
 - Keep diffs focused and minimal. Avoid unnecessary third-party dependencies.
-- When a change alters what the app does, ships, or requires to build, update the documents that say so
-  in the same commit: `README.md`, this file, `ADDITIONAL.md`, `docs/`, and the phase plan in
-  `PLAN_WINDOWS.md`. A document that describes a removed feature is a bug.
+- When a change alters what the app does, ships, or requires to build, update the README, this guide, ADDITIONAL.md, and any affected documentation under docs/. Keep user-facing documentation aligned with the shipped app.
 
 ## Releasing
 A `v*` tag is the release: pushing one runs `.github/workflows/release.yml`, which packages Windows
@@ -80,8 +78,7 @@ A `v*` tag is the release: pushing one runs `.github/workflows/release.yml`, whi
   (`require_windows_natives` is the documented override) and re-checks every hash before publishing.
 - Publishing uses the workflow's built-in `GITHUB_TOKEN` with `Contents: write`; no extra secret is
   needed on this standalone repository.
-- Do not put API credentials into a release build. `LASTFM_API_KEY` / `LASTFM_SECRET` reach the launcher as
-  plain text, and the launcher is downloaded by strangers.
+- Do not put service credentials or secrets into a release build; distributed launchers can be inspected.
 - Testing a release without publishing it: run the workflow from the Actions tab with `as_draft: true`.
 
 ## Audio Changes and Telemetry

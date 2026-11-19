@@ -86,10 +86,6 @@ import com.music.bitchord.data.model.Song
 import com.music.bitchord.ui.theme.BcColors
 import com.music.bitchord.ui.theme.BcShapes
 import com.music.bitchord.ui.theme.BcSpacing
-import com.music.bitchord.data.model.isMatchPending
-import com.music.bitchord.data.model.isMatchMissing
-import androidx.compose.ui.draw.alpha
-import androidx.compose.material3.CircularProgressIndicator
 import com.music.bitchord.data.model.artworkAt
 import androidx.compose.foundation.border
 
@@ -472,14 +468,9 @@ private fun SongRowContent(
         targetValue = if (isCurrent || selected) activeTint.copy(alpha = 0.14f) else Color.Transparent,
         label = "song row background",
     )
-    // A Spotify track still being matched to a YouTube Music song, or one that
-    // has no match: shown, but not something a tap or a menu can act on.
-    val matching = song.isMatchPending
-    val unavailable = song.isMatchMissing
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .alpha(if (unavailable) 0.45f else 1f)
             .background(activeBackground)
             .longPressMenuClickable(onClick = onClick, onLongClick = onLongPress)
             .contextClick(onMore ?: onLongPress)
@@ -582,25 +573,16 @@ private fun SongRowContent(
                 modifier = Modifier.size(20.dp),
             )
         }
-        if (matching) {
+        song.durationText?.let {
             Spacer(Modifier.width(8.dp))
-            CircularProgressIndicator(
-                modifier = Modifier.size(16.dp),
-                strokeWidth = 2.dp,
+            Text(
+                text = it,
+                style = MaterialTheme.typography.labelMedium,
                 color = subtitleColor,
             )
-        } else {
-            song.durationText?.let {
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = subtitleColor,
-                )
-            }
         }
         // Same sheet the long-press opens, for anyone who doesn't think to hold.
-        if (onMore != null && !matching && !unavailable) {
+        if (onMore != null) {
             RowMoreButton(onClick = onMore, tint = subtitleColor)
         }
     }

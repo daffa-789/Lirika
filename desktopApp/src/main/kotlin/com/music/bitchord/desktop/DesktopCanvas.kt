@@ -30,8 +30,7 @@ import java.net.http.HttpResponse
 import java.time.Duration
 
 /**
- * A looping video that stands in for a track's cover art — what Spotify calls a Canvas and Apple
- * calls motion artwork.
+ * A short looping video that can accompany a track's cover art.
  *
  * [url] is what the player mounts; [fallbackUrl] is tried once if that errors, which is how the
  * Apple provider hands over a second rendition of the same clip. The metadata is not decoration:
@@ -44,7 +43,6 @@ data class DesktopCanvasArtwork(
     val title: String? = null,
     val artist: String? = null,
     val album: String? = null,
-    val source: DesktopCanvasSource = DesktopCanvasSource.OTHER,
 ) {
     /**
      * Whether this clip really belongs to the track we asked about.
@@ -71,8 +69,7 @@ data class DesktopCanvasArtwork(
  * The four providers, asked in turn until one answers with a clip that is really this track's.
  *
  * Apple and Tidal first because their clips are square and belong to the release; the community
- * index next because it is the only one covering back catalogue; Spotify last because it is the
- * one that needs a credential.
+ * index follows for back catalogue coverage.
  */
 object DesktopCanvasClient {
 
@@ -120,7 +117,6 @@ object DesktopCanvasClient {
                 { DesktopAppleMusicCanvas.search(title, artist, album) },
                 { DesktopTidalCanvas.search(title, artist, album) },
                 { DesktopCommunityCanvas.search(title, artist, album) },
-                { DesktopSpotifyCanvas.search(title, artist, album) },
             ) { it.matches(title, artist, album) }
         }
     }
@@ -144,7 +140,6 @@ object DesktopCanvasClient {
                 { DesktopAppleMusicCanvas.searchAlbum(name, credit) },
                 { DesktopTidalCanvas.searchAlbum(name, credit) },
                 { DesktopCommunityCanvas.searchAlbum(name, credit) },
-                { DesktopSpotifyCanvas.searchAlbum(name, credit) },
             ) { it.matches(name, credit, name) }
         }
     }

@@ -27,7 +27,7 @@ remains as an attribution trail.
   Playing view, and the island as the out-of-window player.
 - Manual crossfade and blend-on-skip; the analyser-driven Automix, its ONNX models and native library
   are gone.
-- Last.fm scrobbling with user-supplied API credentials.
+- Google sign-in for YouTube Music personalization; no third-party account integrations on desktop.
 - Release manifests (`SHA256SUMS.txt`) generated for every tagged Windows/Linux build.
 
 ## Interface contracts

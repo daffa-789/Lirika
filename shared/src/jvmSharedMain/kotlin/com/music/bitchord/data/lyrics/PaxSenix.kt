@@ -16,7 +16,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.abs
 
-/** Public Apple lyrics plus optional authenticated Spotify and Musixmatch routes. */
+/** Public Apple lyrics plus optional authenticated Musixmatch routes. */
 object PaxSenix {
     private const val API = "https://api.paxsenix.org"
     private const val PUBLIC_PROXY = "https://lyrics.paxsenix.org"
@@ -48,18 +48,6 @@ object PaxSenix {
             .build()
         lyricsGet(url.toString())
             ?.let(::parseResponse)
-    }
-
-    suspend fun spotifyLyrics(
-        title: String,
-        artist: String,
-        durationMs: Long,
-    ): List<LyricLine>? = withContext(Dispatchers.IO) {
-        val id = searchTrackId("spotify/search", title, artist, durationMs)
-        id?.let {
-            apiBody(apiUrl("lyrics/spotify").addQueryParameter("id", it).build())
-                ?.let(::parseResponse)
-        } ?: genericAuthenticatedLyrics(title, artist, durationMs)
     }
 
     suspend fun musixmatchLyrics(
@@ -104,21 +92,6 @@ object PaxSenix {
         val scriptPath = APPLE_INDEX_SCRIPT.find(page)?.value ?: return null
         val script = lyricsGet("https://music.apple.com$scriptPath") ?: return null
         return APPLE_TOKEN.find(script)?.value
-    }
-
-    private fun searchTrackId(
-        path: String,
-        title: String,
-        artist: String,
-        durationMs: Long,
-    ): String? {
-        val query: HttpUrl.Builder.() -> Unit = {
-            addQueryParameter("q", "$title $artist")
-        }
-        val root = apiBody(apiUrl(path).apply(query).build())
-            ?.let { runCatching { lyricsJson.parseToJsonElement(it) }.getOrNull() }
-            ?: return null
-        return bestCandidate(root, title, artist, durationMs)?.id
     }
 
     private fun genericAuthenticatedLyrics(

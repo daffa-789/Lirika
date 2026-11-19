@@ -235,15 +235,8 @@ import com.music.bitchord.data.model.SubscriptionState
 import com.music.bitchord.data.model.UiState
 import com.music.bitchord.data.model.UserPlaylist
 import com.music.bitchord.data.model.durationMillis
-import com.music.bitchord.data.model.isMatchMissing
-import com.music.bitchord.data.model.isMatchPending
 import com.music.bitchord.data.model.isSameTrackAs
 import com.music.bitchord.data.model.playingRowMatcher
-import com.music.bitchord.data.model.isUnresolvedSpotify
-import com.music.bitchord.data.spotify.SPOTIFY_PAGE_PREFIX
-import com.music.bitchord.data.spotify.SpotifyLibrary
-import com.music.bitchord.sharedui.resources.Res as SharedRes
-import com.music.bitchord.sharedui.resources.spotify_logo
 import com.music.bitchord.data.model.withoutRepeatsOf
 import com.music.bitchord.ui.icons.BitChordIcons
 import dev.chrisbanes.haze.HazeState
@@ -346,7 +339,7 @@ private val ARTIST_BANNER_HEIGHT = 340.dp
 /** The library shelf the account's own playlists arrive on, and the one edits are spliced into. */
 private const val PLAYLISTS_SHELF = "Playlists"
 private const val STATS_MAX_DELTA_MS = 15_000L
-private const val SCROBBLE_THRESHOLD_MS = 180_000L
+private const val LISTENING_PLAY_THRESHOLD_MS = 180_000L
 
 /** Used for tracking restart of the current song when previous button is pressed. */
 private const val BACK_RESTARTS_AFTER_MS = 10_000L
@@ -443,9 +436,6 @@ fun BitChordDesktopApp() {
     val libraryGridState = rememberLazyGridState()
     /** A Library shelf's "Show all", open as a grid in place of the page. */
     var libraryShowAll by remember { mutableStateOf<HomeShelf?>(null) }
-    /** What the Spotify grid is waiting on, or why it is empty; null once its playlists are in. */
-    var spotifyLibraryStatus by remember { mutableStateOf<String?>(null) }
-    var spotifyImportOpen by remember { mutableStateOf(false) }
     /** Where the one back button in the top bar goes: every place visited, oldest first. */
     val navHistory = remember { mutableStateListOf<DesktopNavEntry>() }
     /** Set while [goBack] puts a place back, so that move is not itself recorded as a visit. */
@@ -551,12 +541,8 @@ fun BitChordDesktopApp() {
     var outputPrecision by remember { mutableStateOf(persistence.string("output_precision", "PCM_16")) }
     // The blob backdrop the mesh replaced, kept as an opt-out.
     var legacyMeshGradient by remember { mutableStateOf(persistence.boolean("legacy_mesh_gradient", false)) }
-    var animatedCanvas by remember { mutableStateOf(persistence.boolean("animated_canvas", true)) }
-    var spotifyCanvasCookie by remember { mutableStateOf(DesktopSpotifyToken.cookie()) }
-    // Held here rather than by the Integrations page, so leaving the page does not close the
-    // sign-in window.
-    var spotifySignInJob by remember { mutableStateOf<Job?>(null) }
-    var spotifySignInError by remember { mutableStateOf<String?>(null) }
+    // Motion artwork is optional and decodes frames continuously; keep it off until requested.
+    var animatedCanvas by remember { mutableStateOf(persistence.boolean("animated_canvas", false)) }
     var showNerdStats by remember { mutableStateOf(persistence.boolean("show_nerd_stats", false)) }
     var syncedLyrics by remember {
         mutableStateOf(persistence.boolean(DesktopLyricsClient.KEY_SYNCED_LYRICS, true))
@@ -722,7 +708,6 @@ fun BitChordDesktopApp() {
         saveQueue()
         persistence.saveHistory(history)
         playbackEngine.load(song, startPlaying)
-        scope.launch { DesktopScrobbling.updateNowPlaying(song) }
     }
 
     /** A song played on its own — from a search row, a shelf card, history. */
@@ -733,29 +718,6 @@ fun BitChordDesktopApp() {
         liveQueue = DesktopQueue(songs, index = 0)
         preShuffleOrder = emptyList()
         playCurrent(startPlaying)
-    }
-
-    /** Opens the Spotify sign-in window for an `sp_dc`, or closes the one already open. */
-    fun signInToSpotify() {
-        spotifySignInJob?.let {
-            it.cancel()
-            return
-        }
-        spotifySignInError = null
-        spotifySignInJob = scope.launch {
-            try {
-                val cookie = DesktopWebSignIn.captureSpotify()
-                DesktopSpotifyToken.setCookie(cookie)
-                spotifyCanvasCookie = cookie
-            } catch (cancelled: kotlinx.coroutines.CancellationException) {
-                throw cancelled
-            } catch (failure: Exception) {
-                DesktopTrackLog.log("sign-in: Spotify failed: ${failure.message}")
-                spotifySignInError = failure.message ?: "Could not complete the Spotify sign-in."
-            } finally {
-                spotifySignInJob = null
-            }
-        }
     }
 
     /** Takes a captured cookie all the way to a saved account. */
@@ -789,13 +751,10 @@ fun BitChordDesktopApp() {
     }
 
     fun playSongs(songs: List<Song>, startIndex: Int = 0, source: DesktopQueueSource? = null) {
-        // A Spotify playlist's rows still being matched to YouTube Music, or with no match, have
-        // nothing to play: they stay out of the queue, and the pick moves to the next playable row.
-        val resolved = songs.withIndex().filterNot { it.value.isUnresolvedSpotify }
-        if (resolved.isEmpty()) return
-        val playable = resolved.map { canonicalSong(it.value).withSource(source) }
+        if (songs.isEmpty()) return
+        val playable = songs.map { canonicalSong(it).withSource(source) }
         // Past the end still means the last row, as the clamp here always did.
-        val at = resolved.indexOfFirst { it.index >= startIndex }.takeIf { it >= 0 } ?: resolved.lastIndex
+        val at = startIndex.coerceIn(0, playable.lastIndex)
         // The phone's context queue: the album up to the pick, the pick, what the listener had
         // queued by hand, then the rest of the album.
         val built = QueueTimeline.buildContextQueue(
@@ -953,7 +912,7 @@ fun BitChordDesktopApp() {
     // than racing it; and a loading page restored by Back fetches again.
     LaunchedEffect(openedCollection?.browseId, openedCollection?.loading, collectionReloads) {
         val pending = openedCollection
-            ?.takeIf { it.loading && !it.browseId.startsWith(SPOTIFY_PAGE_PREFIX) }
+            ?.takeIf { it.loading }
             ?: return@LaunchedEffect
         collectionError = null
         DesktopSearchClient.browse(
@@ -971,27 +930,6 @@ fun BitChordDesktopApp() {
             },
             onFailure = { collectionError = it.message ?: "Could not open ${pending.title.ifBlank { "this page" }}" },
         )
-    }
-
-    // A Spotify playlist: its tracks, then each one's YouTube Music match. Keyed like the browse
-    // above, so opening another page cancels it, and Back to a page left half matched (or Retry
-    // on one that failed) reads it again.
-    LaunchedEffect(openedCollection?.browseId, collectionReloads) {
-        val page = openedCollection?.takeIf { it.browseId.startsWith(SPOTIFY_PAGE_PREFIX) }
-            ?: return@LaunchedEffect
-        if (!page.loading && page.songs.none { it.isMatchPending }) return@LaunchedEffect
-        collectionError = null
-        fun update(change: (DesktopCollection) -> DesktopCollection) {
-            openedCollection?.takeIf { it.browseId == page.browseId }?.let { openedCollection = change(it) }
-        }
-        runCatching { loadSpotifyPlaylist(page.browseId.removePrefix(SPOTIFY_PAGE_PREFIX), ::update) }
-            .onFailure { failure ->
-                if (failure is kotlinx.coroutines.CancellationException) throw failure
-                DesktopTrackLog.log("spotify: playlist ${page.title} failed: ${failure.message}")
-                collectionError = failure.message ?: "Could not open ${page.title}"
-                // The error page stands in for the list only while there is no list.
-                update { if (it.songs.isEmpty()) it.copy(loading = true) else it }
-            }
     }
 
     fun openAlbum(browseId: String) = openCollection(browseId)
@@ -1041,7 +979,7 @@ fun BitChordDesktopApp() {
     fun downloadAll(songs: List<Song>) {
         val have = downloads.map(Song::videoId).toSet()
         DesktopDownloadQueue.enqueueAll(
-            songs.filterNot { it.videoId in have || it.localPath != null || it.isUnresolvedSpotify },
+            songs.filterNot { it.videoId in have || it.localPath != null },
         )
     }
 
@@ -1263,47 +1201,6 @@ fun BitChordDesktopApp() {
         )
     }
 
-    /**
-     * Keeps an imported Spotify playlist where the phone does: on the account when signed in,
-     * otherwise on this computer, which is also the fallback if the account refuses it. Returns a
-     * note only for that fallback.
-     */
-    suspend fun importSpotifyPlaylist(title: String, songs: List<Song>): String? {
-        val signedIn = DesktopYouTubeAuth.isSignedIn
-        if (signedIn) {
-            val created = DesktopSearchClient.createPlaylist(title, PlaylistPrivacy.PRIVATE, songs.map(Song::videoId))
-            created.getOrNull()?.let { playlistId ->
-                editPlaylistShelf { items ->
-                    val card = ShelfItem(
-                        title = title,
-                        subtitle = "${songs.size} songs",
-                        thumbnailUrl = songs.firstOrNull()?.thumbnailUrl,
-                        videoId = null,
-                        browseId = "VL$playlistId",
-                    )
-                    listOf(card) + items.filterNot { it.browseId == card.browseId }
-                }
-                libraryStale = true
-                openCollection("VL$playlistId")
-                return null
-            }
-            DesktopTrackLog.log("spotify import: account playlist failed: ${created.exceptionOrNull()?.message}")
-        }
-        val playlist = DesktopPlaylist(title = title, songs = songs)
-        playlists = playlists + playlist
-        persistence.savePlaylists(playlists)
-        openPlaylist(playlist)
-        return if (signedIn) {
-            DesktopStrings.format(
-                "spotify_import_local_fallback",
-                title,
-                fallback = "Couldn't create it on YouTube Music, so '%1\$s' was saved on this device instead.",
-            )
-        } else {
-            null
-        }
-    }
-
     fun addToPlaylist(playlist: DesktopPlaylist) {
         val song = playlistTarget ?: return
         playlists = playlists.map { current ->
@@ -1331,7 +1228,6 @@ fun BitChordDesktopApp() {
     playbackEngine = remember {
         DesktopPlaybackEngine(
             onEnded = {
-                selectedSong?.let(DesktopScrobbling::onPlaybackEnded)
                 if (DesktopSleepTimer.afterTrack.value) {
                     DesktopSleepTimer.cancel()
                 } else if (repeatMode == DesktopRepeatMode.ONE) {
@@ -1362,7 +1258,6 @@ fun BitChordDesktopApp() {
                     selectedSong = song
                     history = (listOf(song) + history.filterNot { it.videoId == song.videoId }).take(50)
                     persistence.saveHistory(history)
-                    DesktopScrobbling.updateNowPlaying(song)
                 }
             },
         )
@@ -1690,7 +1585,6 @@ fun BitChordDesktopApp() {
         )
     }
     LaunchedEffect(playback.song?.videoId, playback.isPlaying, playback.durationMs) {
-        DesktopScrobbling.onPlaybackStateChanged(playback)
         DesktopWindowsMedia.publish(playback)
     }
     // Refetched on opening the page rather than cached for the session: the
@@ -1698,11 +1592,6 @@ fun BitChordDesktopApp() {
     LaunchedEffect(destination, youtubeSignedIn, sessionRevision) {
         if (destination != DesktopDestination.HISTORY || !youtubeSignedIn) return@LaunchedEffect
         DesktopSearchClient.history().onSuccess { remoteHistory = it }
-    }
-    // Keyed on the same things, plus the rate: Discord counts the bar down on
-    // its own clock, so only a change to what it was told is worth another push.
-    LaunchedEffect(playback.song?.videoId, playback.isPlaying, playback.durationMs, playbackSpeed, playback.streamFormat) {
-        DesktopDiscordRpc.onPlaybackStateChanged(playback, playbackSpeed)
     }
     // The account's own history on YouTube Music, which is what the home feed is built out of.
     DisposableEffect(playback.song?.videoId) {
@@ -1732,8 +1621,9 @@ fun BitChordDesktopApp() {
             val position = snapshot.positionMs
             val delta = (position - previousPosition).takeIf { it in 1L..STATS_MAX_DELTA_MS } ?: 0L
             if (delta > 0L) {
-                val threshold = snapshot.durationMs.takeIf { it > 0L }?.let { minOf(it / 2L, SCROBBLE_THRESHOLD_MS) }
-                    ?: SCROBBLE_THRESHOLD_MS
+                val threshold = snapshot.durationMs.takeIf { it > 0L }
+                    ?.let { minOf(it / 2L, LISTENING_PLAY_THRESHOLD_MS) }
+                    ?: LISTENING_PLAY_THRESHOLD_MS
                 val reachedThreshold = !countedAsPlay && position >= threshold
                 DesktopListeningStats.record(snapshot.song, delta, reachedThreshold)
                 if (reachedThreshold) {
@@ -1937,20 +1827,39 @@ fun BitChordDesktopApp() {
         searchSuggestions = emptyList()
         // Submitting is picking the first track the typeahead offered, as on the phone — or, with
         // none, the first the results bring back.
-        val typedHit = searchTypeahead.firstNotNullOfOrNull { row ->
+        val directVideoId = DesktopYouTubeVideo.idFromSearchInput(query)
+        val typedHit = if (directVideoId == null) searchTypeahead.firstNotNullOfOrNull { row ->
             when (row) {
                 is SearchResult.TopTrack -> row.song
                 is SearchResult.Track -> row.song
                 else -> null
             }
-        }
+        } else null
         typedHit?.let(::recordSongSearch)
         searchCommitted = true
         searchScrollReset++
         searchLoading = true
         searchError = null
+        if (directVideoId != null) {
+            searchFilter = SearchFilter.VIDEOS
+            searchRows = emptyList()
+        }
         scope.launch {
             try {
+                if (directVideoId != null) {
+                    DesktopSearchClient.youtubeVideo(directVideoId).fold(
+                        onSuccess = { song ->
+                            searchRows = listOf(SearchResult.Track(song))
+                            recordSongSearch(song)
+                            playSong(song, source = DesktopQueueSource(
+                                DesktopStrings["search", "Search"],
+                                PlaybackSourceType.SEARCH,
+                            ))
+                        },
+                        onFailure = { searchError = it.message ?: "Could not load this YouTube video" },
+                    )
+                    return@launch
+                }
                 DesktopMusicSources.search(query, searchFilter).fold(
                     onSuccess = { rows ->
                         searchRows = rows
@@ -1983,6 +1892,10 @@ fun BitChordDesktopApp() {
             searchSuggestions = emptyList()
             return@LaunchedEffect
         }
+        if (DesktopYouTubeVideo.looksLikeVideoInput(query)) {
+            searchSuggestions = emptyList()
+            return@LaunchedEffect
+        }
         delay(SUGGESTION_DEBOUNCE_MS)
         DesktopSearchClient.searchSuggestions(query)
             .onSuccess { if (searchTyping) searchSuggestions = it }
@@ -1993,6 +1906,10 @@ fun BitChordDesktopApp() {
     // longer pause in the typing rather than riding the same one.
     LaunchedEffect(query, searchTyping) {
         if (!searchTyping || query.isBlank()) {
+            searchTypeahead = emptyList()
+            return@LaunchedEffect
+        }
+        if (DesktopYouTubeVideo.looksLikeVideoInput(query)) {
             searchTypeahead = emptyList()
             return@LaunchedEffect
         }
@@ -2037,9 +1954,9 @@ fun BitChordDesktopApp() {
         overlays.settingsPage = DesktopSettingsPage.MAIN
     }
 
-    /** The Library's folder rows: the two folders this computer has, and Spotify once connected. */
-    val libraryLinks = remember(spotifyCanvasCookie.isNotBlank()) {
-        listOfNotNull(
+    /** The Library's two local folders; account playlists live in the YouTube Music shelves. */
+    val libraryLinks = remember {
+        listOf(
             LibraryLink(
                 item = ShelfItem(
                     title = DesktopStrings["downloads", "Downloads"],
@@ -2060,38 +1977,7 @@ fun BitChordDesktopApp() {
                 ),
                 icon = Icons.Rounded.Folder,
             ),
-            // As on the phone, only while signed in to Spotify in Account & integrations.
-            LibraryLink(
-                item = ShelfItem(
-                    title = SPOTIFY_SHELF,
-                    subtitle = DesktopStrings["spotify_library_subtitle", "Your playlists and Liked Songs"],
-                    thumbnailUrl = null,
-                    videoId = null,
-                    browseId = SPOTIFY_LIBRARY_ID,
-                ),
-                icon = Icons.Rounded.Cloud,
-                logo = SharedRes.drawable.spotify_logo,
-            ).takeIf { spotifyCanvasCookie.isNotBlank() },
         )
-    }
-
-    /** The Spotify account's playlists, as a Library grid; Liked Songs first, as on the phone. */
-    fun openSpotifyLibrary() {
-        libraryShowAll = HomeShelf(SPOTIFY_SHELF, emptyList())
-        spotifyLibraryStatus = "Loading your Spotify playlists…"
-        scope.launch {
-            runCatching { SpotifyLibrary.playlists() }
-                .onSuccess { found ->
-                    spotifyLibraryStatus = null
-                    if (libraryShowAll?.title == SPOTIFY_SHELF) {
-                        libraryShowAll = HomeShelf(SPOTIFY_SHELF, found.map { it.toShelfItem() })
-                    }
-                }
-                .onFailure {
-                    DesktopTrackLog.log("spotify: playlists failed: ${it.message}")
-                    spotifyLibraryStatus = "Could not load your Spotify playlists: ${it.message}"
-                }
-        }
     }
 
     /**
@@ -2117,19 +2003,6 @@ fun BitChordDesktopApp() {
         when {
             browseId == LOCAL_DOWNLOADS_ID -> selectDestination(DesktopDestination.DOWNLOADS)
             browseId == LOCAL_MUSIC_ID -> selectDestination(DesktopDestination.LOCAL_MUSIC)
-            browseId == SPOTIFY_LIBRARY_ID -> openSpotifyLibrary()
-            // Spotify's tracks fill in below, as they are read and matched.
-            browseId.startsWith(SPOTIFY_PAGE_PREFIX) -> showCollection(
-                DesktopCollection(
-                    browseId = browseId,
-                    title = item.title,
-                    subtitle = item.subtitle,
-                    thumbnailUrl = item.thumbnailUrl,
-                    type = BrowseType.PLAYLIST,
-                    songs = emptyList(),
-                    loading = true,
-                ),
-            )
             browseId.startsWith(LOCAL_PLAYLIST_PREFIX) ->
                 playlists.firstOrNull { it.id == browseId.removePrefix(LOCAL_PLAYLIST_PREFIX) }?.let(::openPlaylist)
             else -> openShelfItem(item)
@@ -2958,8 +2831,7 @@ fun BitChordDesktopApp() {
                             }
                             // A page of Settings steps back the way the back button does, unless
                             // one of its prompts is up over it.
-                            overlays.settingsPage != null &&
-                                !overlays.lastfmLogin && !overlays.listenBrainzToken && !overlays.discordToken -> {
+                            overlays.settingsPage != null -> {
                                 goBack()
                                 true
                             }
@@ -3088,14 +2960,6 @@ fun BitChordDesktopApp() {
                         )
                     }
 
-                    if (spotifyImportOpen) {
-                        DesktopSpotifyImportDialog(
-                            signedIn = youtubeSignedIn,
-                            onImported = ::importSpotifyPlaylist,
-                            onDismiss = { spotifyImportOpen = false },
-                        )
-                    }
-
                     if (overlays.signIn) {
                         DesktopSignInDialog(
                             busy = signInBusy,
@@ -3117,27 +2981,6 @@ fun BitChordDesktopApp() {
                                     } finally {
                                         signInBusy = null
                                         webSignInJob = null
-                                    }
-                                }
-                            },
-                            onImport = { profile ->
-                                scope.launch {
-                                    when (val found = withContext(Dispatchers.IO) { DesktopBrowserCookies.read(profile) }) {
-                                        is DesktopBrowserCookies.Result.Session ->
-                            signIn(found.cookie, profile.label, profile.database.toString())
-                                        DesktopBrowserCookies.Result.SignedOut ->
-                                            signInError = "${profile.label} is not signed in."
-                                        is DesktopBrowserCookies.Result.Unavailable ->
-                                            signInError = "${profile.label}: ${found.reason}."
-                                    }
-                                }
-                            },
-                            onPaste = { pasted ->
-                                scope.launch {
-                                    if (!DesktopBrowserCookies.hasSigningSecret(pasted)) {
-                                        signInError = "That cookie has no signing secret in it — copy the whole header."
-                                    } else {
-                                        signIn(pasted, "the cookie you pasted")
                                     }
                                 }
                             },
@@ -3206,16 +3049,6 @@ fun BitChordDesktopApp() {
                     if (overlays.downloadManager) {
                         DesktopDownloadManagerDialog(onDismiss = { overlays.downloadManager = false })
                     }
-                    if (overlays.lastfmLogin) {
-                        DesktopLastfmLoginDialog(onDismiss = { overlays.lastfmLogin = false })
-                    }
-                    if (overlays.listenBrainzToken) {
-                        DesktopListenBrainzTokenDialog(onDismiss = { overlays.listenBrainzToken = false })
-                    }
-                    if (overlays.discordToken) {
-                        DesktopDiscordTokenDialog(onDismiss = { overlays.discordToken = false })
-                    }
-
                     if (overlays.audioOutput) {
                         DesktopAudioOutputDialog(onDismiss = { overlays.audioOutput = false })
                     }
@@ -3308,8 +3141,6 @@ fun BitChordDesktopApp() {
                                         animatedCanvas = it
                                         persistence.saveBoolean("animated_canvas", it)
                                     },
-                                    spotifyCanvasReady = spotifyCanvasCookie.isNotBlank(),
-                                    onOpenSpotifyCanvasSetup = { overlays.settingsPage = DesktopSettingsPage.SPOTIFY_CANVAS },
                                     dontRepeatSuggestions = dontRepeatSuggestions,
                                     onDontRepeatSuggestionsChange = {
                                         dontRepeatSuggestions = it
@@ -3452,7 +3283,6 @@ fun BitChordDesktopApp() {
                                             )
                                         }
                                     },
-                                    onOpenIntegrations = { overlays.settingsPage = DesktopSettingsPage.INTEGRATIONS },
                                     onOpenLicenses = { overlays.settingsPage = DesktopSettingsPage.LICENSES },
                                 )
                                 DesktopSettingsPage.EQUALIZER -> DesktopEqualizerDialog(onDismiss = ::goBack)
@@ -3485,29 +3315,6 @@ fun BitChordDesktopApp() {
                                     onDismiss = ::goBack,
                                 )
                                 DesktopSettingsPage.TRANSLATION_LANGUAGE -> DesktopTranslationLanguageDialog(onDismiss = ::goBack)
-                                DesktopSettingsPage.SPOTIFY_CANVAS -> DesktopSpotifyCanvasDialog(
-                                    onDismiss = ::goBack,
-                                    onSaved = { spotifyCanvasCookie = it },
-                                )
-                                DesktopSettingsPage.INTEGRATIONS -> DesktopIntegrationsDialog(
-                                    song = playback.song,
-                                    spotify = DesktopSpotifyConnection(
-                                        connected = spotifyCanvasCookie.isNotBlank(),
-                                        canSignIn = DesktopWebSignIn.available,
-                                        signingIn = spotifySignInJob != null,
-                                        error = spotifySignInError,
-                                        onSignIn = ::signInToSpotify,
-                                        onPasteCookie = { overlays.settingsPage = DesktopSettingsPage.SPOTIFY_CANVAS },
-                                        onDisconnect = {
-                                            DesktopSpotifyToken.setCookie("")
-                                            spotifyCanvasCookie = ""
-                                        },
-                                    ),
-                                    onOpenLastfm = { overlays.lastfmLogin = true },
-                                    onOpenListenBrainz = { overlays.listenBrainzToken = true },
-                                    onOpenDiscordToken = { overlays.discordToken = true },
-                                    onDismiss = ::goBack,
-                                )
                                 DesktopSettingsPage.LICENSES -> DesktopLicensesPage(onDismiss = ::goBack)
                             }
                             }
@@ -3744,14 +3551,6 @@ fun BitChordDesktopApp() {
                                 Modifier.fillMaxWidth().padding(top = 8.dp, end = 12.dp),
                                 horizontalArrangement = Arrangement.End,
                             ) { DesktopLibrarySortMenu() }
-                            spotifyLibraryStatus?.takeIf { libraryShowAll?.title == SPOTIFY_SHELF }?.let { status ->
-                                Text(
-                                    status,
-                                    color = DesktopSecondary,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.padding(horizontal = PAGE_GUTTER, vertical = 12.dp),
-                                )
-                            }
                             LibraryGridPage(
                                 shelf = libraryShowAll!!,
                                 gridState = libraryGridState,
@@ -3770,7 +3569,6 @@ fun BitChordDesktopApp() {
                             onShelfItemClick = ::openLibraryItem,
                             onShelfItemLongPress = { item -> if (item.videoId != null) openMenu(item.toSong()) },
                             onNewPlaylist = { overlays.playlistDialog = true },
-                            onImportSpotifyPlaylist = { spotifyImportOpen = true },
                             onShowAll = { shelf -> libraryShowAll = shelf },
                             replay = {
                                 // The phone's wallet of Replay cards, or nothing until there is
@@ -5139,7 +4937,6 @@ private fun DesktopLibraryGroupingContent(
 
 /** Mobile's section order, with desktop-only groups placed beside their closest mobile counterpart. */
 private enum class DesktopSettingsSection {
-    ACCOUNT,
     SOURCES,
     AUDIO_QUALITY,
     DOWNLOADS,
@@ -5182,8 +4979,6 @@ private fun DesktopSettingsScreen(
     onCrossfadeSecondsChange: (Int) -> Unit,
     animatedCanvas: Boolean,
     onAnimatedCanvasChange: (Boolean) -> Unit,
-    spotifyCanvasReady: Boolean,
-    onOpenSpotifyCanvasSetup: () -> Unit,
     dontRepeatSuggestions: Boolean,
     onDontRepeatSuggestionsChange: (Boolean) -> Unit,
     filterNonMusicAudio: Boolean,
@@ -5236,7 +5031,6 @@ private fun DesktopSettingsScreen(
     onRemoveSource: (DesktopSourceConfig) -> Unit,
     onMoveSource: (DesktopSourceConfig, Int) -> Unit,
     onTestSource: (DesktopSourceConfig) -> Unit,
-    onOpenIntegrations: () -> Unit,
     onOpenLicenses: () -> Unit,
 ) {
     var editingSource by remember { mutableStateOf<DesktopSourceConfig?>(null) }
@@ -5625,17 +5419,6 @@ private fun DesktopSettingsScreen(
                         animatedCanvas,
                         onAnimatedCanvasChange,
                     )
-                    if (animatedCanvas) {
-                        SettingsNavigationRow(
-                            title = DesktopStrings["spotify_canvas_setup", "Spotify Canvas setup"],
-                            subtitle = if (spotifyCanvasReady) {
-                                "Connected"
-                            } else {
-                                "To use Spotify Canvas, provide your Spotify sp_dc cookie."
-                            },
-                            onClick = onOpenSpotifyCanvasSetup,
-                        )
-                    }
                 }
             }
             if (section == DesktopSettingsSection.DYNAMIC_ISLAND) item {
@@ -5805,19 +5588,6 @@ private fun DesktopSettingsScreen(
                     }
                 }
             }
-            if (section == DesktopSettingsSection.ACCOUNT) item {
-                // One row rather than the four groups this used to be. Every
-                // integration option Android has lives behind it; inline, the
-                // list was longer than the rest of Settings put together.
-                SettingsGroup(DesktopStrings["d_account", "Account"]) {
-                    SettingsRow(
-                        Icons.Rounded.Share,
-                        DesktopStrings["account_integrations", "Account & integrations"],
-                        DesktopStrings["d_discord_rich_presence_last_fm_and_listenbrainz", "Discord rich presence, Last.fm and ListenBrainz"],
-                        onOpenIntegrations,
-                    )
-                }
-            }
             if (section == DesktopSettingsSection.ADVANCED) item {
                 SettingsGroup(DesktopStrings["advanced_options", "Advanced options"]) {
                     SettingsToggle(
@@ -5873,10 +5643,6 @@ private fun DesktopSettingsFooter(onLicenses: () -> Unit) {
             append("  ")
             withLink(LinkAnnotation.Url("https://github.com/kushagrasinghx", linkStyles)) {
                 append("Developer")
-            }
-            append("  ")
-            withLink(LinkAnnotation.Url("https://discord.gg/pDdKfrdHY6", linkStyles)) {
-                append("Discord")
             }
             append("  ")
             withLink(LinkAnnotation.Clickable("licenses", linkStyles) { onLicenses() }) {
@@ -6454,34 +6220,26 @@ private fun DesktopCollectionSongRow(
     /** Takes this row out of the playlist being read. */
     onRemove: ((Song) -> Unit)? = null,
 ) {
-    // A Spotify track still being matched to YouTube Music, or with no match: listed, but there is
-    // nothing yet to play, like, save or remove.
-    val unresolved = song.isUnresolvedSpotify
     val openContextMenu = LocalDesktopContextMenu.current
     Row(
         Modifier
             .fillMaxWidth()
-            .alpha(if (song.isMatchMissing) 0.45f else 1f)
-            .contextClick(if (unresolved) null else ({ openContextMenu(song) }))
+            .contextClick { openContextMenu(song) }
             .clip(RoundedCornerShape(BcShapes.artwork))
             .background(if (striped) Color.White.copy(alpha = 0.03f) else Color.Transparent)
             .desktopHoverFill(corner = BcShapes.artwork)
-            .clickable(enabled = !unresolved) { onClick(song) }
+            .clickable { onClick(song) }
             .padding(horizontal = 8.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val nowPlaying = isCurrent ?: song.isNowPlaying()
         Box(Modifier.width(28.dp), contentAlignment = Alignment.Center) {
-            if (song.isMatchPending) {
-                CircularProgressIndicator(color = DesktopSecondary, strokeWidth = 1.5.dp, modifier = Modifier.size(12.dp))
-            } else {
-                Text(
-                    number.toString(),
-                    color = DesktopSecondary,
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.labelSmall,
-                )
-            }
+            Text(
+                number.toString(),
+                color = DesktopSecondary,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.labelSmall,
+            )
         }
         Spacer(Modifier.width(12.dp))
         // No sleeve on an album's rows.
@@ -6525,7 +6283,6 @@ private fun DesktopCollectionSongRow(
             Modifier.width(collectionActionsWidth(onRemove != null)),
             horizontalArrangement = Arrangement.End,
         ) {
-            if (unresolved) return@Row
             onRemove?.let { remove ->
                 IconButton(onClick = { remove(song) }, modifier = Modifier.size(34.dp)) {
                     Icon(

@@ -155,9 +155,6 @@
     <string name="customize_card">Customize the card</string>
     <string name="customize_card_subtitle">Status, wording and both buttons</string>
     <string name="delete">Delete</string>
-    <string name="discord">Discord</string>
-    <string name="discord_button_variables">{song_name}, {artist_name} and {album_name} are replaced with the current track.</string>
-    <string name="discord_token">Discord token</string>
     <string name="done">Done</string>
     <string name="download">Download</string>
     <string name="downloaded">Downloaded</string>
@@ -208,16 +205,11 @@
     <string name="start_radio">Start radio</string>
     <string name="nothing_downloading">Nothing downloading</string>
     <string name="close_search">Close search</string>
-    <string name="lastfm_now_playing_subtitle">Update Last.fm with what you are listening to</string>
-    <string name="scrobble_primary_artist_only">Only scrobble primary artist</string>
-    <string name="scrobble_primary_artist_only_subtitle">Use the first artist when a track credits multiple artists</string>
     <string name="lead_with_song">Lead with the song</string>
     <string name="lead_with_song_subtitle">Puts the title on the bold line instead of the artist</string>
-    <string name="discord_show_audio_quality">Show audio quality</string>
     <string name="hide_from_sidebar">Hide from sidebar</string>
     <string name="n_hidden">%1$d hidden</string>
     <string name="like">Like</string>
-    <string name="listenbrainz_token">ListenBrainz token</string>
     <string name="lyrics_not_available">Lyrics not available</string>
     <string name="name">Name</string>
     <string name="no_lyrics_for_track">No lyrics for this track</string>
@@ -234,8 +226,6 @@
     <string name="remove_from_queue">Remove from queue</string>
     <string name="reset_to_default">Reset to default</string>
     <string name="saved_to_downloads">Saved to Downloads</string>
-    <string name="scrobble_tracks">Scrobble tracks</string>
-    <string name="scrobble_tracks_subtitle">Log plays to your Last.fm timeline</string>
     <string name="search_this_list">Search this list</string>
     <string name="second_button">Second button</string>
     <string name="share">Share</string>
@@ -243,9 +233,6 @@
     <string name="sleep_timer">Sleep timer</string>
     <string name="sources_order_header">Sources, tried in this order</string>
     <string name="spdc_token">sp_dc token</string>
-    <string name="spotify_canvas_setup">Spotify Canvas setup</string>
-    <string name="spotify_canvas_setup_description">To use Spotify Canvas, provide your Spotify sp_dc cookie.</string>
-    <string name="spotify_canvas_setup_steps">1. Sign in at open.spotify.com in a browser.\n2. Open Developer Tools, then Application and Cookies.\n3. Copy the value of the sp_dc cookie.\n4. Paste it below.</string>
     <string name="status">Status</string>
     <string name="status_dialog_message">What your account shows while presence is active.</string>
     <string name="token">Token</string>

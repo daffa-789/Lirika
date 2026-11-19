@@ -28,6 +28,11 @@ import kotlinx.serialization.json.JsonObject
  */
 object DesktopSearchClient {
 
+    /** Resolve a regular YouTube video link without searching the Music catalog. */
+    suspend fun youtubeVideo(videoId: String): Result<Song> = runCatching {
+        DesktopYouTubeVideo.resolve(videoId)
+    }
+
     suspend fun search(
         query: String,
         filter: SearchFilter = SearchFilter.SONGS,

@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * ## Why this is not [com.music.bitchord.data.canvas.normalizeForMatch]
  *
- * That one is right for the Spotify-canvas matcher and wrong here, because it
+ * That one is right for artwork matching and wrong here, because it
  * reduces to `[^a-z0-9\s]` before comparing — every character that is not a
  * lowercase ASCII letter becomes a space. A Cyrillic, Greek, Devanagari or CJK
  * name therefore folds to the empty string, and every one of them folds to the

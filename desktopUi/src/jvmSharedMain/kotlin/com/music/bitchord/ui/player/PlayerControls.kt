@@ -284,9 +284,8 @@ private const val BADGE_SIZE_BUMP = 0.5f
  *
  * Apple Music sets those in the sleeve's own colour lifted pale rather than a
  * translucent white — see [com.music.bitchord.ui.theme.rememberPlayerTint].
- * Provided at the top of the player; white anywhere it isn't, while the
- * sleeve is still being read, and while a Spotify Canvas fills the screen,
- * where there is no sleeve colour to echo. The title, transport, seek and
+ * Provided at the top of the player while the sleeve is being read. The
+ * title, transport, seek and
  * volume bars stay white on purpose.
  */
 internal val LocalPlayerTint = compositionLocalOf { Color.White }

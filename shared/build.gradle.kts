@@ -31,7 +31,6 @@ kotlin {
             dependencies {
                 // The network stack the lyrics providers and the YouTube Music client run on.
                 api("io.ktor:ktor-client-okhttp:$ktor")
-                api("io.ktor:ktor-client-websockets:$ktor")
                 api("io.ktor:ktor-client-content-negotiation:$ktor")
                 api("io.ktor:ktor-serialization-kotlinx-json:$ktor")
                 api("org.jetbrains.kotlinx:kotlinx-serialization-json:$serialization")

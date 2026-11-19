@@ -39,20 +39,6 @@ val nativeClassifier = when (targetOs) {
     "linux" -> "linux-x86_64"
     else -> error("Lirika desktop ships for Windows and Linux only")
 }
-private fun localProperty(name: String): String = rootProject.file("local.properties")
-    .takeIf { it.isFile }
-    ?.readLines()
-    ?.firstOrNull { it.startsWith("$name=") }
-    ?.substringAfter('=')
-    ?.trim()
-    ?.takeIf { it.isNotBlank() }
-    ?: System.getenv(name).orEmpty().trim()
-
-// Last.fm signs every request with these, so signing in from inside the app
-// needs them at hand. Supplied locally and never committed, as on Android.
-val lastfmApiKey = localProperty("LASTFM_API_KEY")
-val lastfmSecret = localProperty("LASTFM_SECRET")
-
 /** Versions shared with the other modules; see the block in gradle.properties. */
 fun property(name: String): String = providers.gradleProperty("bitchord.lib.$name").get()
 
@@ -125,12 +111,11 @@ dependencies {
         }
     )
 
-    // The engine the scrobbler, the JioSaavn client and the addon HTTP calls run on. Same version as
-    // :shared, whose ktor version these used to be mixed with on one classpath.
+    // The JioSaavn client and addon HTTP calls use this engine. Keep it aligned with :shared,
+    // which also uses Ktor for YouTube and lyric requests.
     implementation("io.ktor:ktor-client-core:$ktor")
     implementation("io.ktor:ktor-client-cio:$ktor")
     implementation("io.ktor:ktor-client-content-negotiation:$ktor")
-    // WebSockets arrive with :shared, whose Discord gateway exports the engine.
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${property("serialization")}")
     implementation("org.slf4j:slf4j-nop:2.0.16")
@@ -653,14 +638,11 @@ val windowsPortableAssemble by tasks.registering {
     val appJar = tasks.named<Jar>("jar").flatMap { it.archiveFile }
     val runtime = configurations.named("runtimeClasspath")
     val version = appVersion
-    val lastfmKey = lastfmApiKey
-    val lastfmSharedSecret = lastfmSecret
     val mainClass = composeMainClass
     // Declared, not implied.
     inputs.file(appJar)
     inputs.files(runtime)
     inputs.property("version", version)
-    inputs.property("lastfm", lastfmKey.isNotBlank())
     inputs.property("mainClass", mainClass)
     outputs.dir(stage)
     doLast {
@@ -697,9 +679,6 @@ val windowsPortableAssemble by tasks.registering {
                 appendLine("set \"RUNNER=java\"")
                 appendLine("if defined JAVA_HOME set \"RUNNER=%JAVA_HOME%\\bin\\java\"")
                 append("\"%RUNNER%\" -Dbitchord.version=$version")
-                if (lastfmKey.isNotBlank() && lastfmSharedSecret.isNotBlank()) {
-                    append(" -Dbitchord.lastfm.key=$lastfmKey -Dbitchord.lastfm.secret=$lastfmSharedSecret")
-                }
                 appendLine(" -cp \"%HERE%lib\\*\" $mainClass %*")
                 appendLine("endlocal")
             },
@@ -746,7 +725,7 @@ val windowsPortableAssemble by tasks.registering {
             // The stripped jars are the one place where a dependency is rewritten rather than copied,
             // so both halves have to be proven: this platform's library survived, the others did not.
             if (!holds("org/sqlite/native/Windows/x86_64/sqlitejdbc.dll")) {
-                add("the SQLite driver's Windows library is missing — browser cookie import would fail")
+                add("the SQLite driver's Windows library is missing — browser session renewal would fail")
             }
             if (!holds("com/sun/jna/win32-x86-64/jnidispatch.dll")) {
                 add("JNA's Windows dispatcher is missing — DPAPI and the island window would fail")
@@ -807,9 +786,6 @@ compose.desktop {
         // A forced collection every 20 s kept the idle heap small but woke the process on a timer
         // even while nothing was playing. G1's own pacing is enough for a music player.
         jvmArgs("-Dbitchord.version=$appVersion")
-        if (lastfmApiKey.isNotBlank() && lastfmSecret.isNotBlank()) {
-            jvmArgs("-Dbitchord.lastfm.key=$lastfmApiKey", "-Dbitchord.lastfm.secret=$lastfmSecret")
-        }
 
         nativeDistributions {
             targetFormats(

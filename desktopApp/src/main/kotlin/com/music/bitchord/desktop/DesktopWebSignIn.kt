@@ -26,9 +26,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  * needs no browser installed, decrypts nothing, and is the same on Windows, macOS and Linux.
  *
  * YouTube Music waits for "Use this profile", as the phone does, so a multi-channel account can pick
- * its identity on the page first. Spotify is taken the moment `sp_dc` is set: JavaFX's WebKit has no
- * DRM, so Spotify's web player fails to start, and closing before it shows is what the phone does
- * too.
+ * its identity on the page first.
  */
 internal object DesktopWebSignIn {
 
@@ -39,11 +37,6 @@ internal object DesktopWebSignIn {
                 "&continue=https%3A%2F%2Fmusic.youtube.com%2F",
             "https://music.youtube.com/",
         ),
-        SPOTIFY(
-            "Sign in to Spotify",
-            "https://accounts.spotify.com/login?continue=https%3A%2F%2Fopen.spotify.com%2F",
-            "https://open.spotify.com/",
-        ),
     }
 
     /** Whether a sign-in window can be shown at all: it needs the JavaFX toolkit. */
@@ -51,9 +44,6 @@ internal object DesktopWebSignIn {
 
     /** The music.youtube.com `Cookie` header, once the listener confirms the profile. */
     suspend fun captureYouTube(): String = capture(Service.YOUTUBE_MUSIC)
-
-    /** The `sp_dc` cookie's value, taken as soon as Spotify sets it. */
-    suspend fun captureSpotify(): String = capture(Service.SPOTIFY)
 
     private suspend fun capture(service: Service): String {
         check(available) { "This desktop cannot show a sign-in window (JavaFX did not start)." }
@@ -87,8 +77,6 @@ internal object DesktopWebSignIn {
     /** How long a sign-in may sit open before the app gives up on it. */
     private const val SIGN_IN_TIMEOUT_MS = 5 * 60_000L
 
-    private const val SPOTIFY_COOKIE = "sp_dc"
-
     /** The cookies [service] would send, as a `Cookie` header value. */
     private fun cookies(service: Service): String = runCatching {
         CookieHandler.getDefault().get(URI(service.cookieUrl), emptyMap())["Cookie"].orEmpty().joinToString("; ")
@@ -96,12 +84,6 @@ internal object DesktopWebSignIn {
 
     private fun youtubeSession(): String? =
         cookies(Service.YOUTUBE_MUSIC).takeIf(DesktopBrowserCookies::hasSigningSecret)
-
-    private fun spotifySession(): String? = cookies(Service.SPOTIFY).split(';')
-        .map(String::trim)
-        .firstOrNull { it.substringBefore('=') == SPOTIFY_COOKIE }
-        ?.substringAfter('=')
-        ?.takeIf(String::isNotBlank)
 
     /** One sign-in: a window that resolves [finish] once, with the session or a cancellation. */
     private class SignInWindow(
@@ -139,10 +121,8 @@ internal object DesktopWebSignIn {
         fun cancel() = complete(Result.failure(CancellationException("sign-in window closed")))
 
         /**
-         * A clean start: an empty cookie jar and a new WebView with storage of its own. Clearing only
-         * the cookies is not enough to change account — Spotify also remembers the login in web
-         * storage — and starting over is how the listener picks another Google, Facebook or Apple
-         * account.
+         * A clean start: an empty cookie jar and a new WebView with storage of its own. Starting
+         * over is how the listener picks another Google account.
          */
         private fun load() {
             discard()
@@ -166,9 +146,6 @@ internal object DesktopWebSignIn {
                 // choosing its identity on this page.
                 Service.YOUTUBE_MUSIC ->
                     confirm.isDisable = !url.startsWith("https://music.youtube.com") || youtubeSession() == null
-                Service.SPOTIFY -> if (url.startsWith("https://open.spotify.com")) {
-                    spotifySession()?.let { complete(Result.success(it)) }
-                }
             }
         }
 
@@ -207,8 +184,7 @@ internal object DesktopWebSignIn {
  *
  * JavaFX's HTTP2Loader builds one HttpClient with whatever [CookieHandler.getDefault] is at its first
  * request and keeps it, so replacing the default afterwards changes nothing for the WebView. This
- * wrapper stays the default and [reset] swaps what is inside it. The jar inside is JavaFX's own:
- * `java.net.CookieManager` drops cookies Spotify's login depends on.
+ * wrapper stays the default and [reset] swaps what is inside it. The jar inside is JavaFX's own.
  */
 internal object DesktopWebCookies : CookieHandler() {
     @Volatile

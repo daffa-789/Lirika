@@ -114,9 +114,6 @@
     <string name="customize_card">Sesuaikan kartu</string>
     <string name="customize_card_subtitle">Status, teks, dan kedua tombol</string>
     <string name="delete">Hapus</string>
-    <string name="discord">Discord</string>
-    <string name="discord_button_variables">{song_name}, {artist_name}, dan {album_name} akan digantikan dengan trek yang sedang diputar.</string>
-    <string name="discord_token">Token Discord</string>
     <string name="done">Selesai</string>
     <string name="download">Unduh</string>
     <string name="downloaded">Diunduh</string>
@@ -149,11 +146,9 @@
     <string name="library_sign_in_description">Masuk ke akun Google Anda untuk melihat lagu yang disukai, playlist, dan riwayat YouTube Music Anda.</string>
     <string name="nothing_downloading">Tidak ada yang sedang diunduh</string>
     <string name="close_search">Tutup pencarian</string>
-    <string name="lastfm_now_playing_subtitle">Perbarui Last.fm dengan apa yang sedang Anda dengarkan</string>
     <string name="lead_with_song">Utamakan lagu</string>
     <string name="lead_with_song_subtitle">Menempatkan judul pada baris tebal, bukan artis</string>
     <string name="like">Suka</string>
-    <string name="listenbrainz_token">Token ListenBrainz</string>
     <string name="lyrics_not_available">Lirik tidak tersedia</string>
     <string name="name">Nama</string>
     <string name="no_lyrics_for_track">Tidak ada lirik untuk trek ini</string>
@@ -170,8 +165,6 @@
     <string name="remove_from_queue">Hapus dari antrean</string>
     <string name="reset_to_default">Setel ulang ke default</string>
     <string name="saved_to_downloads">Disimpan ke Unduhan</string>
-    <string name="scrobble_tracks">Scrobble trek</string>
-    <string name="scrobble_tracks_subtitle">Catat putaran ke linimasa Last.fm Anda</string>
     <string name="search_this_list">Cari di daftar ini</string>
     <string name="second_button">Tombol kedua</string>
     <string name="share">Bagikan</string>
@@ -179,9 +172,6 @@
     <string name="sleep_timer">Timer tidur</string>
     <string name="sources_order_header">Sumber, dicoba dalam urutan ini</string>
     <string name="spdc_token">Token sp_dc</string>
-    <string name="spotify_canvas_setup">Penyiapan Spotify Canvas</string>
-    <string name="spotify_canvas_setup_description">Untuk menggunakan Spotify Canvas, berikan cookie sp_dc Spotify Anda.</string>
-    <string name="spotify_canvas_setup_steps">1. Masuk di open.spotify.com melalui browser.\n2. Buka Developer Tools, lalu Application dan Cookies.\n3. Salin nilai cookie sp_dc.\n4. Tempel di bawah ini.</string>
     <string name="status">Status</string>
     <string name="status_dialog_message">Apa yang ditampilkan akun Anda saat presence aktif.</string>
     <string name="token">Token</string>
@@ -300,9 +290,6 @@
     <string name="pipeline_output_api">API Output</string>
     <string name="pipeline_device_name">Nama Perangkat</string>
     <string name="start_radio">Mulai radio</string>
-    <string name="scrobble_primary_artist_only">Hanya scrobble artis utama</string>
-    <string name="scrobble_primary_artist_only_subtitle">Pakai artis pertama saat lagu mencantumkan beberapa artis</string>
-    <string name="discord_show_audio_quality">Tampilkan kualitas audio</string>
     <string name="hide_from_sidebar">Sembunyikan dari bilah samping</string>
     <string name="n_hidden">%1$d disembunyikan</string>
     <string name="sort_default">Urutan bawaan</string>

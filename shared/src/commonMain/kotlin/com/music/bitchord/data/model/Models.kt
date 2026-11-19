@@ -353,7 +353,7 @@ const val PLAYER_ART_PX = 1200
 
 enum class BrowseType { ALBUM, ARTIST, PLAYLIST, OTHER }
 
-/** A queue-level origin shown above Now Playing, in the style of Spotify. */
+/** A queue-level origin shown above Now Playing. */
 enum class PlaybackSourceType {
     HOME,
     SEARCH,

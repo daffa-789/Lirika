@@ -18,13 +18,6 @@ import java.text.Normalizer
 import java.time.Duration
 import java.util.Locale
 
-/**
- * Where motion artwork comes from.
- *
- * Spotify's clips re-tint the backdrop as they loop; the rest settle on their first frame.
- */
-enum class DesktopCanvasSource { SPOTIFY, OTHER }
-
 // ── Matching, shared by every provider ──────────────────────────────────────
 
 /**

@@ -1,6 +1,5 @@
 package com.music.bitchord.desktop
 
-import java.nio.charset.StandardCharsets
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -77,36 +76,12 @@ class DesktopCanvasTest {
     }
 
     @Test
-    fun `the canvas request and response round-trip through the protobuf`() {
-        val uri = "spotify:track:4cOdK2wGLETKBW3PvgPWqT"
-        val request = DesktopSpotifyCanvas.encodeCanvasRequest(uri)
-        // CanvasRequest { Track tracks = 1 { string track_uri = 1 } } — two nested length-delimited
-        // fields, so the uri's bytes have to be in there verbatim.
-        assertTrue(String(request, StandardCharsets.ISO_8859_1).contains(uri))
-
-        // A response holding one canvas for that track.
-        val canvas = field(2, "https://canvaz.scdn.co/upload/x.cnvs.mp4") + field(5, uri)
-        val response = nested(1, canvas)
-        val hits = DesktopSpotifyCanvas.decodeCanvasResponse(response)
-        assertEquals(1, hits.size)
-        assertEquals("https://canvaz.scdn.co/upload/x.cnvs.mp4", hits.single().url)
-        assertEquals(uri, hits.single().trackUri)
-    }
-
-    @Test
-    fun `a response that is not protobuf yields nothing rather than throwing`() {
-        assertTrue(DesktopSpotifyCanvas.decodeCanvasResponse("not protobuf at all".toByteArray()).isEmpty())
-        assertTrue(DesktopSpotifyCanvas.decodeCanvasResponse(ByteArray(0)).isEmpty())
-    }
-
-    @Test
     fun `a playlist is streamed rather than saved as if it were the media`() {
         // Apple's motion artwork is HLS. Saving the playlist to disk leaves FFmpeg with segment
         // URLs it cannot resolve, which is what "could not open the clip" was.
         assertTrue(isManifest("https://mvod.itunes.apple.com/x/P359420040_default.m3u8"))
         assertTrue(isManifest("https://im-fa.manifest.tidal.com/1/manifests/abc.mpd?token=1"))
         assertFalse(isManifest("https://resources.tidal.com/videos/a/b/c/d/e/1280x1280.mp4"))
-        assertFalse(isManifest("https://canvaz.scdn.co/upload/x.cnvs.mp4"))
     }
 
     @Test
@@ -137,24 +112,4 @@ class DesktopCanvasTest {
         )
     }
 
-    private fun field(number: Int, value: String): ByteArray {
-        val bytes = value.toByteArray(StandardCharsets.UTF_8)
-        return byteArrayOf((number shl 3 or 2).toByte()) + varint(bytes.size) + bytes
-    }
-
-    private fun nested(number: Int, payload: ByteArray): ByteArray =
-        byteArrayOf((number shl 3 or 2).toByte()) + varint(payload.size) + payload
-
-    private fun varint(value: Int): ByteArray {
-        var remaining = value
-        val out = mutableListOf<Byte>()
-        while (true) {
-            if (remaining and 0x7F.inv() == 0) {
-                out += remaining.toByte()
-                return out.toByteArray()
-            }
-            out += ((remaining and 0x7F) or 0x80).toByte()
-            remaining = remaining ushr 7
-        }
-    }
 }

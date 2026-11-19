@@ -759,7 +759,7 @@ private fun TypeaheadSongRow(
 
 /**
  * What was searched for before, shown in place of the results while the field
- * is empty — the same spot Spotify and Apple Music put it, and the reason the
+ * is empty — the familiar spot in a music app, and the reason the
  * blank search page isn't just a sentence any more.
  */
 private fun LazyListScope.recentSearches(
@@ -879,7 +879,7 @@ private fun LazyListScope.recentAddonSearches(
 }
 
 /**
- * Spotify-style entity row: square thumbnail, bold title, subtitle with type,
+ * Compact entity row: square thumbnail, bold title, subtitle with type,
  * and a removal button. Tapping navigates to the entity or plays it directly.
  */
 @Composable

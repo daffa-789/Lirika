@@ -82,6 +82,7 @@ object Innertube {
         get() = com.music.bitchord.data.LocaleTags.acceptLanguage(currentLocaleTag)
 
     private const val MUSIC_BASE = "https://music.youtube.com/youtubei/v1"
+    private const val YOUTUBE_BASE = "https://www.youtube.com/youtubei/v1"
     private const val MUSIC_ORIGIN = "https://music.youtube.com"
     private const val YOUTUBE_ORIGIN = "https://www.youtube.com"
 
@@ -93,6 +94,15 @@ object Innertube {
      */
     private const val WEB_REMIX_VERSION = "1.20250101.01.00"
     private const val WEB_REMIX_CLIENT_ID = "67"
+
+    /** Used only if the regular YouTube shell cannot provide its current WEB version. */
+    private const val WEB_VERSION_FALLBACK = "2.20250101.00.00"
+    private const val WEB_CLIENT_ID = "1"
+
+    @Volatile
+    private var youtubeWebClientVersion: String? = null
+
+    private val youtubeWebVersionLock = Mutex()
 
     private const val TAG = "BitChord"
 
@@ -604,9 +614,17 @@ object Innertube {
 
     /** Timed caption transcript used as a last-resort lyrics source. */
     suspend fun transcript(videoId: String): JsonObject = postMusic("get_transcript") {
-        // get_transcript expects a tiny protobuf: field 1, length, video id.
-        val bytes = byteArrayOf(10, videoId.toByteArray().size.toByte()) + videoId.toByteArray()
-        put("params", Base64.getEncoder().encodeToString(bytes))
+        put("params", transcriptParams(videoId))
+    }
+
+    /** Same transcript request, addressed to YouTube's regular WEB client. */
+    suspend fun transcriptWeb(videoId: String): JsonObject = postWeb("get_transcript") {
+        put("params", transcriptParams(videoId))
+    }
+
+    /** Player metadata for an ordinary YouTube video, without resolving a media stream. */
+    suspend fun videoPlayerWeb(videoId: String): JsonObject = postWeb("player") {
+        put("videoId", videoId)
     }
 
     suspend fun search(query: String, params: String? = null, anonymous: Boolean = true): JsonObject =
@@ -1163,6 +1181,93 @@ object Innertube {
                 ?.get("visitorData")?.jsonPrimitive?.content
         }
         return response
+    }
+
+    /**
+     * Regular YouTube's WEB client, used for video pages and their captions.
+     * It shares the captured Google session and SAPISID signing scheme with
+     * YouTube Music, but identifies and signs requests for youtube.com itself.
+     */
+    private suspend fun postWeb(
+        endpoint: String,
+        query: Map<String, String> = emptyMap(),
+        bodyExtras: JsonObjectBuilder.() -> Unit,
+    ): JsonObject {
+        if (cookie != null) ensureSessionScope()
+        val session = scope
+        val clientVersion = youtubeWebVersion()
+        val response = withRetry {
+            client.post("$YOUTUBE_BASE/$endpoint") {
+                contentType(ContentType.Application.Json)
+                parameter("prettyPrint", "false")
+                parameter("hl", currentLanguage)
+                header("Accept-Language", acceptLanguageHeader)
+                query.forEach { (key, value) -> parameter(key, value) }
+                header("X-Origin", YOUTUBE_ORIGIN)
+                header("Origin", YOUTUBE_ORIGIN)
+                header("Referer", "$YOUTUBE_ORIGIN/")
+                header("X-YouTube-Client-Name", WEB_CLIENT_ID)
+                header("X-YouTube-Client-Version", clientVersion)
+                visitorData?.let { header("X-Goog-Visitor-Id", it) }
+                cookie?.let { c ->
+                    header("Cookie", c)
+                    header("X-Goog-AuthUser", authUserFor(session))
+                    pageIdFor(session)?.let { header("X-Goog-PageId", it) }
+                    sapisidFrom(c)?.let { header("Authorization", sapisidHash(it, YOUTUBE_ORIGIN)) }
+                }
+                setBody(
+                    buildJsonObject {
+                        putJsonObject("context") {
+                            putJsonObject("client") {
+                                put("clientName", "WEB")
+                                put("clientVersion", clientVersion)
+                                put("hl", currentLanguage)
+                                put("gl", currentRegion)
+                                visitorData?.let { put("visitorData", it) }
+                            }
+                            putJsonObject("user") {
+                                put("lockedSafetyMode", false)
+                                dataSyncIdFor(session)?.let { put("onBehalfOfUser", it) }
+                            }
+                            putJsonObject("request") { put("useSsl", true) }
+                        }
+                        bodyExtras()
+                    },
+                )
+            }.body<JsonObject>()
+        }
+        if (visitorData == null) {
+            visitorData = response["responseContext"]?.jsonObject
+                ?.get("visitorData")?.jsonPrimitive?.content
+        }
+        return response
+    }
+
+    /** Reads WEB's current client version once, using the fallback only if ytcfg is unavailable. */
+    private suspend fun youtubeWebVersion(): String {
+        youtubeWebClientVersion?.let { return it }
+        return youtubeWebVersionLock.withLock {
+            youtubeWebClientVersion?.let { return@withLock it }
+            val live = runCatching {
+                val sessionCookie = cookie
+                val html = client.get("$YOUTUBE_ORIGIN/") {
+                    header("User-Agent", WEB_USER_AGENT)
+                    header("Accept-Language", acceptLanguageHeader)
+                    sessionCookie?.let { c ->
+                        header("Cookie", c)
+                        sapisidFrom(c)?.let { header("Authorization", sapisidHash(it, YOUTUBE_ORIGIN)) }
+                    }
+                }.bodyAsText()
+                CONFIG_CLIENT_VERSION.find(html)?.groupValues?.get(1)
+            }.getOrNull()
+            if (live == null) WEB_VERSION_FALLBACK
+            else live.also { youtubeWebClientVersion = it }
+        }
+    }
+
+    private fun transcriptParams(videoId: String): String {
+        val bytes = videoId.toByteArray()
+        return Base64.getEncoder().encodeToString(byteArrayOf(10, bytes.size.toByte()) + bytes)
     }
 
     /**

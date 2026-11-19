@@ -95,7 +95,7 @@ data class DesktopStreamFormat(
     val isHiQuality: Boolean
         get() = !isLossless && (kbps ?: 0) >= HI_QUALITY_KBPS
 
-    /** This format in the shape the shared stats line and the Discord quality line read. */
+    /** This format in the shape the shared playback stats line reads. */
     fun nerdSnapshot(sourceId: String?): NerdStats.Snapshot =
         NerdStats.Snapshot(
             mimeType = codecName?.let { "audio/$it" },

@@ -203,11 +203,11 @@ internal class DesktopCanvasDecoder {
     }
 
     private companion object {
-        /** Plenty for a sleeve, and a quarter of the pixels of the source. */
-        const val MAX_EDGE = 540
+        /** Enough for a sleeve while keeping each decoded frame small. */
+        const val MAX_EDGE = 420
 
-        /** Thirty frames a second is motion; sixty is just more bitmaps. */
-        const val MIN_INTERVAL_MS = 33L
+        /** Twenty frames a second keeps motion clear without allocating 30 bitmaps each second. */
+        const val MIN_INTERVAL_MS = 50L
     }
 }
 

@@ -175,7 +175,6 @@ interface PlayerSettingsSource {
     val lyricsSourceOrder: StateFlow<List<LyricsSource>>
     val meteredConnection: StateFlow<Boolean?>
     val preferUsbDac: StateFlow<Boolean>
-    val prioritizeSpotifyCanvas: StateFlow<Boolean>
     val reduceAnimation: StateFlow<Boolean>
     val reduceDynamicBlur: StateFlow<Boolean>
     val showNerdStats: StateFlow<Boolean>
@@ -183,7 +182,6 @@ interface PlayerSettingsSource {
     val mixInProgress: StateFlow<Boolean>
     /** Where the next transition sits, for the scrubber's marker; null between plans. */
     val transitionWindow: StateFlow<TransitionWindow?>
-    val spotifyCanvasAutoHide: StateFlow<Boolean>
     val syncedLyrics: StateFlow<Boolean>
     val translationLanguage: StateFlow<String>
     val versionAlignmentInProgress: StateFlow<Boolean>

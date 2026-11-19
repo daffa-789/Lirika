@@ -8,7 +8,6 @@ import com.music.bitchord.data.innertube.InnerTubeXResolver
 import com.music.bitchord.data.innertube.StreamResolver
 import com.music.bitchord.data.innertube.potoken.PoTokenGenerator
 import com.music.bitchord.data.lyrics.LyricsTranslation
-import com.music.bitchord.data.spotify.SpotifyLibrary
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -27,6 +26,7 @@ import kotlin.math.roundToInt
 import org.jetbrains.compose.resources.painterResource
 
 fun main() {
+    clearRetiredIntegrationSettings()
     // Before any WebView exists, so the sign-in window can start over with an empty jar.
     DesktopWebCookies.install()
     // The player is the phone's, from the shared UI module; this is what it reads underneath.
@@ -38,10 +38,6 @@ fun main() {
         DesktopTrackLog.log("$tag/$level: $message" + (error?.let { " (${it.message})" } ?: ""))
     }
     LyricsTranslation.cacheDir = DesktopMediaCache.directory.toFile()
-    // The Spotify library both apps share, on the tokens the web player mints in JavaFX.
-    SpotifyLibrary.auth = SpotifyLibrary.Auth {
-        DesktopSpotifyToken.accessToken()?.let { SpotifyLibrary.Tokens(it, DesktopSpotifyToken.clientToken()) }
-    }
     // Desktop follows its own language picker (zh-Hant / zh-Hans preserved).
     com.music.bitchord.data.innertube.Innertube.appLanguage = { DesktopStrings.resolvedTag() }
     // YouTube playback is the phone's StreamResolver over InnerTubeX, with BotGuard PoTokens
@@ -61,6 +57,23 @@ fun main() {
         ).asTokenProvider(),
     )
     desktopMain()
+}
+
+/** These desktop integrations were removed; discard their now-unused saved tokens and settings. */
+private fun clearRetiredIntegrationSettings() {
+    val retiredKeys = listOf(
+        "spotify_spdc_token",
+        "discord_token", "discord_username", "discord_rpc_enabled", "discord_use_details",
+        "discord_advanced_mode", "discord_status", "discord_activity_type", "discord_activity_name",
+        "discord_button_1_text", "discord_button_1_visible", "discord_button_2_text",
+        "discord_button_2_visible", "discord_show_audio_quality",
+        "lastfm_enabled", "lastfm_username", "lastfm_session_key", "lastfm_scrobble_enabled",
+        "lastfm_now_playing", "lastfm_primary_artist_only", "lastfm_api_key", "lastfm_api_secret",
+        "listenbrainz_enabled", "listenbrainz_token", "listenbrainz_primary_artist_only",
+        "scrobble_min_duration", "scrobble_delay_percent", "scrobble_delay_seconds",
+    )
+    val preferences = DesktopPersistence().preferences
+    retiredKeys.forEach(preferences::remove)
 }
 
 private fun desktopMain() = application {

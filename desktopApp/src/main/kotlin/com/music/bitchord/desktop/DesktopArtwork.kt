@@ -28,14 +28,14 @@ import java.net.URI
 internal object DesktopArtworkCache {
 
     /**
-     * A sixth of the heap, within reason.
+     * One eighth of the heap, within reason.
      *
      * Derived rather than fixed so the budget still makes sense against whatever `-Xmx` the
-     * launcher was given, and clamped at both ends so a small heap still caches something and a
-     * large one does not decide it may hold half a gigabyte of thumbnails.
+     * launcher was given, and capped at 64 MB to leave room for playback, Compose and native
+     * graphics memory on modest machines.
      */
     internal val budgetBytes: Long =
-        (Runtime.getRuntime().maxMemory() / 6).coerceIn(32L * 1024 * 1024, 128L * 1024 * 1024)
+        (Runtime.getRuntime().maxMemory() / 8).coerceIn(24L * 1024 * 1024, 64L * 1024 * 1024)
 
     /** Four bytes a pixel, which is what every format here decodes to. */
     private val images = DesktopByteBudgetLru<ImageBitmap>(budgetBytes) {
