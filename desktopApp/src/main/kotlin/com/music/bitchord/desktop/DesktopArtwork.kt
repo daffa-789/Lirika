@@ -28,14 +28,9 @@ import java.net.URI
 internal object DesktopArtworkCache {
 
     /**
-     * One eighth of the heap, within reason.
-     *
-     * Derived rather than fixed so the budget still makes sense against whatever `-Xmx` the
-     * launcher was given, and capped at 64 MB to leave room for playback, Compose and native
-     * graphics memory on modest machines.
+     * One sixteenth of the heap, within reason — see [artworkMemoryBudgetBytes].
      */
-    internal val budgetBytes: Long =
-        (Runtime.getRuntime().maxMemory() / 8).coerceIn(24L * 1024 * 1024, 64L * 1024 * 1024)
+    internal val budgetBytes: Long = artworkMemoryBudgetBytes()
 
     /** Four bytes a pixel, which is what every format here decodes to. */
     private val images = DesktopByteBudgetLru<ImageBitmap>(budgetBytes) {
@@ -56,6 +51,18 @@ internal object DesktopArtworkCache {
         }.getOrNull()?.also { images.put(url, it) }
     }
 }
+
+/**
+ * The memory budget for decoded artwork, in bytes.
+ *
+ * A fixed ceiling rather than a share of the heap. Coil's own default is 15% of
+ * `Runtime.maxMemory()`, which scales with `-Xmx` — and on a launcher that sets no `-Xmx` at
+ * all, with a quarter of the machine's RAM. Capping it here keeps a long browsing session from
+ * holding hundreds of megabytes of bitmaps nothing will ask for again, while still leaving
+ * room for playback, Compose and native graphics memory.
+ */
+internal fun artworkMemoryBudgetBytes(): Long =
+    (Runtime.getRuntime().maxMemory() / 16).coerceIn(16L * 1024 * 1024, 32L * 1024 * 1024)
 
 /** Artwork, fetched at the size the surface drawing it actually needs. */
 @Composable

@@ -8,6 +8,10 @@ import com.music.bitchord.data.innertube.InnerTubeXResolver
 import com.music.bitchord.data.innertube.StreamResolver
 import com.music.bitchord.data.innertube.potoken.PoTokenGenerator
 import com.music.bitchord.data.lyrics.LyricsTranslation
+import coil3.ImageLoader
+import coil3.PlatformContext
+import coil3.SingletonImageLoader
+import coil3.memory.MemoryCache
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -29,6 +33,8 @@ fun main() {
     clearRetiredIntegrationSettings()
     // Before any WebView exists, so the sign-in window can start over with an empty jar.
     DesktopWebCookies.install()
+    // Before anything loads a picture, so every Coil request shares the bounded cache below.
+    installArtworkImageLoader()
     // The player is the phone's, from the shared UI module; this is what it reads underneath.
     PlayerPlatform.install(DesktopPlayerHost)
     com.music.bitchord.ui.AppUi.install(DesktopAppUiHost)
@@ -223,5 +229,30 @@ private fun openingWindowSize(): androidx.compose.ui.unit.DpSize {
     return androidx.compose.ui.unit.DpSize(
         width = minOf(DEFAULT_WINDOW_WIDTH_DP, (availableWidth * 0.94).toFloat()).dp,
         height = minOf(DEFAULT_WINDOW_HEIGHT_DP, (availableHeight * 0.92).toFloat()).dp,
+    )
+}
+
+/**
+ * Gives Coil one image loader with a memory cache held to the artwork budget.
+ *
+ * Coil's default memory cache is 15% of `Runtime.maxMemory()`. That is a sensible default on a
+ * phone, where the heap is the app's own, but on the desktop it scales with `-Xmx` — and a
+ * launcher that sets no `-Xmx` at all lets the JVM grow to a quarter of the machine's RAM, so
+ * the cache follows it there too. Setting it explicitly keeps decoded covers to a fixed,
+ * modest ceiling no matter how the process was started, which is what keeps a long Explore or
+ * Search session from growing the process without bound.
+ */
+private fun installArtworkImageLoader() {
+    SingletonImageLoader.setSafe(
+        object : SingletonImageLoader.Factory {
+            override fun newImageLoader(context: PlatformContext): ImageLoader =
+                ImageLoader.Builder(context)
+                    .memoryCache(
+                        MemoryCache.Builder()
+                            .maxSizeBytes(artworkMemoryBudgetBytes())
+                            .build(),
+                    )
+                    .build()
+        },
     )
 }

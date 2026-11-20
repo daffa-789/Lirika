@@ -678,7 +678,11 @@ val windowsPortableAssemble by tasks.registering {
                 appendLine("set \"HERE=%~dp0\"")
                 appendLine("set \"RUNNER=java\"")
                 appendLine("if defined JAVA_HOME set \"RUNNER=%JAVA_HOME%\\bin\\java\"")
-                append("\"%RUNNER%\" -Dbitchord.version=$version")
+                // The packaged launchers already carry these through application.jvmArgs; the
+                // portable folder has no jpackage to apply them, so the launcher says them
+                // itself. Without -Xmx the JVM takes a quarter of the machine's RAM and Coil's
+                // default memory cache (15% of the heap) grows with it.
+                append("\"%RUNNER%\" -Xmx512m -XX:+UseG1GC -XX:+UseStringDeduplication -Dbitchord.version=$version")
                 appendLine(" -cp \"%HERE%lib\\*\" $mainClass %*")
                 appendLine("endlocal")
             },
