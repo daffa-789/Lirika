@@ -159,7 +159,11 @@ internal fun DesktopIslandWindow() {
     // A paused island is still the same island: it keeps its cover, its line and its controls,
     // and hovering it opens the transport so Play is one press away. It no longer collapses into a
     // tiny doorbell the moment playback stops.
-    val wantExpanded = !clickThrough && (hovered.value || menuOpen || seeking)
+    // The island is the player: starting to play expands it, so a song begun with the pointer
+    // away or in another window still shows the capsule — it does not stay a resting pill until
+    // the pointer happens to find the glass.
+    val wantExpanded = !clickThrough &&
+        (hovered.value || menuOpen || seeking || isPlaying)
     LaunchedEffect(wantExpanded) {
         animate(
             initialValue = expansion.floatValue,
