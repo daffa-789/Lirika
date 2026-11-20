@@ -72,4 +72,17 @@ class DesktopIslandGeometryTest {
         assertTrue(expandedWidth > collapsedWidth)
         assertTrue(expandedHeight > collapsedHeight)
     }
+
+    @Test
+    fun `the island keeps its place before a song loads`() {
+        // A one-pixel window cannot be pressed back into view, so "nothing playing" is a pill on
+        // screen rather than a vanished capsule.
+        assertTrue(islandWindowVisible(hideWhenPaused = false, isPlaying = false))
+    }
+
+    @Test
+    fun `only the explicit pause preference hides the island`() {
+        assertTrue(islandWindowVisible(hideWhenPaused = true, isPlaying = true))
+        assertTrue(!islandWindowVisible(hideWhenPaused = true, isPlaying = false))
+    }
 }

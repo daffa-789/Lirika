@@ -81,6 +81,16 @@ internal object DesktopIslandClickThrough {
 }
 
 /**
+ * Whether the island window keeps its place on screen.
+ *
+ * Only the explicit "hide while paused" preference takes it away. Whether a song has been loaded
+ * yet is deliberately not a factor: the capsule draws its own "nothing playing" pill, and making
+ * the window a pixel until the first song arrives leaves nothing to click to bring it back.
+ */
+internal fun islandWindowVisible(hideWhenPaused: Boolean, isPlaying: Boolean): Boolean =
+    !hideWhenPaused || isPlaying
+
+/**
  * The island: a frameless window that stays on screen and changes shape.
  *
  * It used to be drawn inside the main window, which made "hide the app" and "keep the island" the
@@ -158,7 +168,11 @@ internal fun DesktopIslandWindow() {
         ) { value, _ -> expansion.floatValue = value }
     }
 
-    val showing = song != null && !(hideWhenPaused && !isPlaying)
+    // Hide only on the explicit "hide while paused" preference. The capsule used to be reduced to
+    // a pixel whenever no song was loaded yet, which made it look as though a press had killed it:
+    // a one-pixel window at (0, 0) cannot be pressed back into view. The card already draws a
+    // "nothing playing" pill for that state, so let it keep its place on screen.
+    val showing = islandWindowVisible(hideWhenPaused, isPlaying)
 
     /**
      * The window's state.
@@ -174,7 +188,13 @@ internal fun DesktopIslandWindow() {
     )
 
     Window(
-        onCloseRequest = { DesktopDynamicIslandSettings.setEnabled(false) },
+        // A close request is not a request to turn the feature off. Several Windows gestures can
+        // deliver WM_CLOSE to a frameless, non-focusable, always-on-top window — the capsule is
+        // dismissed when an app underneath is closed or the desktop switches — and persisting
+        // enabled = false there made the island vanish with no capsule left to press. The
+        // deliberate off switches (menu, tray, toolbar, Settings, Ctrl+Alt+D) all go through
+        // setEnabled() themselves; this window's close is a no-op on purpose.
+        onCloseRequest = { DesktopTrackLog.log("island close request ignored; island stays on") },
         /**
          * The window is always on screen, even with nothing to show.
          *
