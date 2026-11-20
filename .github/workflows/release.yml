@@ -1,6 +1,6 @@
 name: Release
 
-# A tag is the release. Pushing `v1.8.35` builds the Windows and Linux packages and
+# A tag is the release. Pushing `v1.0.0` builds the Windows and Linux packages and
 # publishes them with a SHA-256 manifest. `workflow_dispatch` rebuilds a tag that already
 # exists — after a runner hiccup, or as a draft to read the notes before publishing.
 #
@@ -18,7 +18,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to release, e.g. v1.8.29'
+        description: 'Tag to release, e.g. v1.0.0'
         required: true
         type: string
       as_draft:
@@ -64,7 +64,7 @@ jobs:
           set -euo pipefail
           tag="${REF}"
           if [[ ! "$tag" =~ ^v[0-9]+(\.[0-9]+)+(-[0-9A-Za-z.]+)?$ ]]; then
-            echo "::error::Release tags must look like v1.8.29 or v1.9.0-beta1 (got '${tag}')."
+            echo "::error::Release tags must look like v1.0.0 or v1.1.0-beta1 (got '${tag}')."
             exit 1
           fi
           version="${tag#v}"

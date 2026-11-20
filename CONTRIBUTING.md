@@ -72,7 +72,7 @@ A `v*` tag is the release: pushing one runs `.github/workflows/release.yml`, whi
 `SHA256SUMS.txt` manifest. Rules worth knowing before you cut one:
 
 - The tag without its leading `v` is the app version, and its patch number is also the desktop version
-  code (`-Pbitchord.build`), so `v1.8.30` produces `Lirika-1.8.30.*`. Cut a new tag rather than moving
+  code (`-Pbitchord.build`), so `v1.0.0` produces `Lirika-1.0.0.*`. Cut a new tag rather than moving
   one that has already been published.
 - The workflow fails rather than shipping a Windows build whose Fluent frame or SMTC DLLs did not compile
   (`require_windows_natives` is the documented override) and re-checks every hash before publishing.
