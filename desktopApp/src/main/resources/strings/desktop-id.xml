@@ -11,6 +11,8 @@
     <string name="d_bitchord_is_free_software_and_so_is_everything_it_is_bui">Lirika adalah perangkat lunak bebas, begitu pula semua yang menjadi fondasinya.</string>
     <string name="d_bitchord_youtube_music_session">Lirika — sesi YouTube Music</string>
     <string name="d_blur_unfocused_lyrics">Buramkan lirik yang tidak difokuskan</string>
+    <string name="d_romanized_lyrics_by_default">Tampilkan romanisasi secara otomatis</string>
+    <string name="d_romanized_lyrics_by_default_subtitle">Tampilkan pelafalan dengan huruf Latin otomatis jika tersedia</string>
     <string name="d_closing_the_window_leaves_bitchord_in_the_tray_instead_o">Menutup jendela membuat Lirika tetap di baki, bukan keluar</string>
     <string name="d_dont_repeat_songs_in_current_session">Jangan ulangi lagu pada sesi ini</string>
     <string name="d_downloaded_songs_will_appear_here">Lagu yang diunduh akan muncul di sini.</string>
@@ -70,6 +72,8 @@
     <string name="d_island_turn_on">Nyalakan Island</string>
     <string name="d_island_hide_paused">Sembunyikan saat jeda</string>
     <string name="d_island_hide_paused_subtitle">Menghilangkan kapsul dari layar setiap kali pemutaran dijeda</string>
+    <string name="d_island_karaoke_sweep">Sorotan lirik karaoke</string>
+    <string name="d_island_karaoke_sweep_subtitle">Menyorot kata sesuai timing saat dinyanyikan di kapsul</string>
     <string name="d_crossfade_on_skip">Crossfade saat skip</string>
     <string name="d_island_lock">Kunci posisi</string>
     <string name="d_island_nothing_playing">Tidak ada yang diputar</string>

@@ -24,7 +24,9 @@ data class DesktopLyrics(val source: String, val lines: List<LyricLine>) {
  * the one source only a desktop has: the words inside a local file.
  */
 object DesktopLyricsClient {
-    private const val CACHE_TTL_MS = 12L * 60L * 60L * 1_000L
+    private const val SUCCESS_CACHE_TTL_MS = 12L * 60L * 60L * 1_000L
+    // A provider outage or a brief rate limit must not make a track look lyricless all day.
+    private const val MISS_CACHE_TTL_MS = 60L * 1_000L
 
     /** Keys the settings screen writes and this reads. */
     internal const val KEY_SYNCED_LYRICS = "synced_lyrics"
@@ -86,7 +88,11 @@ object DesktopLyricsClient {
         // query, and a cache keyed only on the id would hand back the earlier
         // automatic answer and look as though the search had done nothing.
         val cacheKey = "${song.videoId}|$durationMs|${song.title}|${song.artist}|${only.orEmpty()}"
-        cache[cacheKey]?.takeIf { System.currentTimeMillis() - it.createdAt < CACHE_TTL_MS }?.let { return it.result }
+        cache[cacheKey]?.let { cached ->
+            val ttl = if (cached.result.isSuccess) SUCCESS_CACHE_TTL_MS else MISS_CACHE_TTL_MS
+            if (System.currentTimeMillis() - cached.createdAt < ttl) return cached.result
+            cache.remove(cacheKey, cached)
+        }
 
         // A downloaded or local file carries its own words; asking servers for a string already
         // on disk is a round trip, and it is why a download showed nothing offline.

@@ -3058,6 +3058,7 @@ internal fun rememberLyricsTranslation(
     haptics: Haptics,
 ): LyricsTranslationUi {
     val reduceTranslationMotion by PlayerSettings.reduceAnimation.collectAsStateWithLifecycle()
+    val romanizedLyricsByDefault by PlayerSettings.romanizedLyricsByDefault.collectAsStateWithLifecycle()
     val configuredLocale = appLanguageTag()
     val preferredTranslation by PlayerSettings.translationLanguage.collectAsStateWithLifecycle()
     // Settings wins where it has been set; blank means follow the app. Only the
@@ -3176,6 +3177,41 @@ internal fun rememberLyricsTranslation(
             }
         }
     }
+    val requestRomanization: (notifyUser: Boolean) -> Unit = { notifyUser ->
+        val source = lyrics.orEmpty()
+        if (source.isNotEmpty() && romanizationState is LyricsTranslationUiState.Idle) {
+            romanizationState = LyricsTranslationUiState.Loading
+            translationJob?.cancel()
+            if (translationState is LyricsTranslationUiState.Loading) {
+                translationState = LyricsTranslationUiState.Idle
+            }
+            romanizationJob?.cancel()
+            romanizationJob = translationScope.launch {
+                when (
+                    val result = PlayerPlatform.host.romanizeLyrics(
+                        trackId = trackId,
+                        lines = source,
+                        targetLanguageTag = translationLanguage,
+                    )
+                ) {
+                    is LyricsRomanizationResult.Romanized -> {
+                        romanizationState = LyricsTranslationUiState.Ready(result.lines)
+                        lyricsDisplayMode = LyricsDisplayMode.Romanized
+                        translationTransition++
+                        if (notifyUser) haptics.play(Haptic.ToggleOn)
+                    }
+                    LyricsRomanizationResult.AlreadyRomanized -> {
+                        romanizationState = LyricsTranslationUiState.SameLanguage
+                        if (notifyUser) PlayerPlatform.host.showMessage(alreadyRomanizedMessage)
+                    }
+                    LyricsRomanizationResult.Unavailable -> {
+                        romanizationState = LyricsTranslationUiState.Idle
+                        if (notifyUser) PlayerPlatform.host.showMessage(romanizationUnavailableMessage)
+                    }
+                }
+            }
+        }
+    }
     val toggleRomanization: () -> Unit = toggleRomanization@{
         when (val state = romanizationState) {
             is LyricsTranslationUiState.Ready -> {
@@ -3193,40 +3229,22 @@ internal fun rememberLyricsTranslation(
                 PlayerPlatform.host.showMessage(alreadyRomanizedMessage)
             }
             LyricsTranslationUiState.Idle -> {
-                val source = lyrics.orEmpty()
-                if (source.isEmpty()) return@toggleRomanization
+                if (lyrics.isNullOrEmpty()) return@toggleRomanization
                 haptics.play(Haptic.Tap)
-                romanizationState = LyricsTranslationUiState.Loading
-                translationJob?.cancel()
-                if (translationState is LyricsTranslationUiState.Loading) {
-                    translationState = LyricsTranslationUiState.Idle
-                }
-                romanizationJob?.cancel()
-                romanizationJob = translationScope.launch {
-                    when (
-                        val result = PlayerPlatform.host.romanizeLyrics(
-                            trackId = trackId,
-                            lines = source,
-                            targetLanguageTag = translationLanguage,
-                        )
-                    ) {
-                        is LyricsRomanizationResult.Romanized -> {
-                            romanizationState = LyricsTranslationUiState.Ready(result.lines)
-                            lyricsDisplayMode = LyricsDisplayMode.Romanized
-                            translationTransition++
-                            haptics.play(Haptic.ToggleOn)
-                        }
-                        LyricsRomanizationResult.AlreadyRomanized -> {
-                            romanizationState = LyricsTranslationUiState.SameLanguage
-                            PlayerPlatform.host.showMessage(alreadyRomanizedMessage)
-                        }
-                        LyricsRomanizationResult.Unavailable -> {
-                            romanizationState = LyricsTranslationUiState.Idle
-                            PlayerPlatform.host.showMessage(romanizationUnavailableMessage)
-                        }
-                    }
-                }
+                requestRomanization(true)
             }
+        }
+    }
+    LaunchedEffect(trackId, lyrics, romanizedLyricsByDefault) {
+        if (!romanizedLyricsByDefault || lyrics.isNullOrEmpty()) return@LaunchedEffect
+        when (val state = romanizationState) {
+            LyricsTranslationUiState.Idle -> requestRomanization(false)
+            is LyricsTranslationUiState.Ready -> if (!showingRomanization) {
+                lyricsDisplayMode = LyricsDisplayMode.Romanized
+                translationTransition++
+            }
+            LyricsTranslationUiState.Loading,
+            LyricsTranslationUiState.SameLanguage -> Unit
         }
     }
     // The one line that sits above the scrubber while the lyrics are open: which

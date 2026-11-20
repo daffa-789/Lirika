@@ -124,6 +124,10 @@ private val NoCast = MutableStateFlow(CastUi())
 
 private val NoWatch = MutableStateFlow(WatchOutputUi())
 
+private object PlayerSettingsDefaults {
+    val romanizedLyricsByDefault: StateFlow<Boolean> = MutableStateFlow(false)
+}
+
 /** What the output drawer needs to draw the watch's row. */
 data class WatchOutputUi(
     /** A watch with BitChord on it is in reach. False (and not [active]) hides the row. */
@@ -171,6 +175,9 @@ interface PlayerSettingsSource {
     val lastPlayerScreen: StateFlow<LastPlayerScreen>
     val legacyMeshGradient: StateFlow<Boolean>
     val lyricsBlur: StateFlow<Boolean>
+    /** Whether new lyric sheets should request Latin-script pronunciation automatically. */
+    val romanizedLyricsByDefault: StateFlow<Boolean>
+        get() = PlayerSettingsDefaults.romanizedLyricsByDefault
     val lyricsOffsetMs: StateFlow<Int>
     val lyricsSourceOrder: StateFlow<List<LyricsSource>>
     val meteredConnection: StateFlow<Boolean?>

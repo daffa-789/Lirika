@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * One object rather than a dozen loose preference reads, because three places have to agree on
  * the same state: the island itself, the menu hanging off the toolbar, and the Settings page.
  *
- * There are four of them, and that is the point. The island used to carry a layout ladder, a
+ * There are only a few preferences, and that is the point. The island used to carry a layout ladder, a
  * switch for each part of the capsule, a transparency slider, a rule about when to shrink, six
  * places to put it and a way to drag it elsewhere — knobs that all said the same thing, which is
  * "how much of this is showing, and where". The island is part of the screen now: it rests at the
@@ -47,6 +47,10 @@ internal object DesktopDynamicIslandSettings {
     /** The capsule's size, 0.8×–1.3×, so it can be read on a 4K panel or kept tidy on 1080p. */
     val scale: MutableStateFlow<Float> = MutableStateFlow(persistence.float(KEY_SCALE, 1f))
 
+    /** Sweep word-timed lyrics across the current line in the island. */
+    val karaokeSweepEnabled: MutableStateFlow<Boolean> =
+        MutableStateFlow(persistence.boolean(KEY_KARAOKE_SWEEP, true))
+
     fun toggle() = setEnabled(!enabled.value)
 
     fun setEnabled(value: Boolean) {
@@ -64,6 +68,9 @@ internal object DesktopDynamicIslandSettings {
         scale.value = clamped
     }
 
+    fun setKaraokeSweepEnabled(value: Boolean) =
+        writeBoolean(KEY_KARAOKE_SWEEP, value, karaokeSweepEnabled)
+
     private fun writeBoolean(key: String, value: Boolean, into: MutableStateFlow<Boolean>) {
         persistence.saveBoolean(key, value)
         into.value = value
@@ -76,6 +83,7 @@ internal object DesktopDynamicIslandSettings {
     private const val KEY_HIDE_WHEN_PAUSED = "island_hide_when_paused"
     private const val KEY_CLICK_THROUGH = "island_click_through"
     private const val KEY_SCALE = "island_scale"
+    private const val KEY_KARAOKE_SWEEP = "island_karaoke_sweep"
 
     const val MIN_SCALE = 0.80f
     const val MAX_SCALE = 1.30f

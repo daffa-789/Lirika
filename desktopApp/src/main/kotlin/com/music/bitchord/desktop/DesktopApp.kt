@@ -5192,6 +5192,17 @@ private fun DesktopSettingsScreen(
                             lyricsBlur,
                             onLyricsBlurChange,
                         )
+                        val romanizedLyricsByDefault by
+                            DesktopPlayerSettings.romanizedLyricsByDefault.collectAsState()
+                        SettingsToggle(
+                            DesktopStrings["d_romanized_lyrics_by_default", "Romanized lyrics by default"],
+                            DesktopStrings[
+                                "d_romanized_lyrics_by_default_subtitle",
+                                "Show Latin-script pronunciation automatically when available",
+                            ],
+                            romanizedLyricsByDefault,
+                            DesktopPlayerSettings::setRomanizedLyricsByDefault,
+                        )
                         SettingsNavigationRow(
                             title = DesktopStrings["lyrics_sources", "Lyrics sources"],
                             subtitle = enabledLyricsSources

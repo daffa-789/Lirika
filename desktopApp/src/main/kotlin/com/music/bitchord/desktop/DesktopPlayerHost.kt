@@ -181,6 +181,8 @@ internal object DesktopPlayerSettings : PlayerSettingsSource {
     )
     override val legacyMeshGradient = MutableStateFlow(false)
     override val lyricsBlur = MutableStateFlow(true)
+    override val romanizedLyricsByDefault =
+        MutableStateFlow(persistence.boolean(KEY_ROMANIZED_LYRICS_BY_DEFAULT, false))
     override val lyricsOffsetMs = MutableStateFlow(
         persistence.int(KEY_LYRICS_OFFSET, 0).coerceIn(MIN_LYRICS_OFFSET_MS, MAX_LYRICS_OFFSET_MS),
     )
@@ -209,8 +211,14 @@ internal object DesktopPlayerSettings : PlayerSettingsSource {
         persistence.saveInt(KEY_LYRICS_OFFSET, clamped)
     }
 
+    fun setRomanizedLyricsByDefault(value: Boolean) {
+        persistence.saveBoolean(KEY_ROMANIZED_LYRICS_BY_DEFAULT, value)
+        romanizedLyricsByDefault.value = value
+    }
+
     private const val KEY_LAST_SCREEN = "last_player_screen"
     private const val KEY_LYRICS_OFFSET = "lyrics_offset_ms"
+    private const val KEY_ROMANIZED_LYRICS_BY_DEFAULT = "romanized_lyrics_by_default"
 }
 
 /** Which glyph a mixer gets, from the only thing Java Sound says about it: its name. */

@@ -13,6 +13,8 @@
     <string name="d_bitchord_is_free_software_and_so_is_everything_it_is_bui">Lirika is free software, and so is everything it is built on.</string>
     <string name="d_bitchord_youtube_music_session">Lirika — YouTube Music session</string>
     <string name="d_blur_unfocused_lyrics">Blur unfocused lyrics</string>
+    <string name="d_romanized_lyrics_by_default">Romanized lyrics by default</string>
+    <string name="d_romanized_lyrics_by_default_subtitle">Show Latin-script pronunciation automatically when available</string>
     <string name="d_closing_the_window_leaves_bitchord_in_the_tray_instead_o">Closing the window leaves Lirika in the tray instead of quitting</string>
     <string name="d_dont_repeat_songs_in_current_session">Don’t repeat songs in current session</string>
     <string name="d_downloaded_songs_will_appear_here">Downloaded songs will appear here.</string>
@@ -72,6 +74,8 @@
     <string name="d_island_turn_on">Turn on island</string>
     <string name="d_island_hide_paused">Hide while paused</string>
     <string name="d_island_hide_paused_subtitle">Takes the capsule off the screen whenever playback is paused</string>
+    <string name="d_island_karaoke_sweep">Karaoke word highlight</string>
+    <string name="d_island_karaoke_sweep_subtitle">Highlights each timed word in the floating island while it is sung</string>
     <string name="d_crossfade_on_skip">Crossfade on skip</string>
     <string name="d_island_lock">Lock position</string>
     <string name="d_island_nothing_playing">Nothing playing</string>

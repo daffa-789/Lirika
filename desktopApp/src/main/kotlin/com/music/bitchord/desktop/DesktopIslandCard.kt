@@ -45,9 +45,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerIcon
@@ -55,6 +57,8 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.style.ResolvedTextDirection
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -97,6 +101,9 @@ internal class IslandLines(
 
     /** The lyric at [index], or null when the track has no real line there. */
     fun lineAt(index: Int): String? = raw.getOrNull(index)?.text?.takeIf { it.isNotBlank() }
+
+    /** The timed lyric at [index], used by the island's word sweep. */
+    fun lyricAt(index: Int): LyricLine? = raw.getOrNull(index)?.takeIf { it.text.isNotBlank() }
 
     fun at(index: Int): IslandLines = IslandLines(index, raw, fallback)
 }
@@ -164,8 +171,8 @@ internal fun islandProgress(positionMs: Long, durationMs: Long): Float {
  * [positionMs] and [progress] are lambdas, not values, and that is the whole performance story of
  * this file. The engine publishes a playhead four times a second; passed as a value it recomposed
  * the entire capsule — artwork, transport row, animated lyric block — on every tick. Read inside
- * `derivedStateOf` and `drawBehind` instead, a tick costs one hairline redraw, and a full
- * recomposition happens only when the *line being sung* changes.
+ * `derivedStateOf` and draw modifiers instead, a tick redraws progress and, when enabled, only the
+ * active timed lyric overlay. A full recomposition happens only when the *line being sung* changes.
  */
 @Composable
 internal fun DesktopIslandCard(
@@ -196,6 +203,7 @@ internal fun DesktopIslandCard(
         derivedStateOf { activeLyricIndex(lines.orEmpty(), positionMs()) }
     }
     val now = remember(lines, song, activeIndex) { islandLines(lines, song, activeIndex) }
+    val karaokeSweepEnabled by DesktopDynamicIslandSettings.karaokeSweepEnabled.collectAsState()
     // The same volume the dock and the OS media keys write; no second source of truth.
     val volume by DesktopPlayerHost.volumeLevel.collectAsState()
 
@@ -241,6 +249,7 @@ internal fun DesktopIslandCard(
             ExpandedIslandFace(
                 song = song,
                 now = now,
+                karaokeSweepEnabled = karaokeSweepEnabled,
                 positionMs = positionMs,
                 durationMs = durationMs,
                 isPlaying = isPlaying,
@@ -258,7 +267,12 @@ internal fun DesktopIslandCard(
                 onToggleRepeat = onToggleRepeat,
             )
         } else {
-            CollapsedIslandFace(song = song, now = now)
+            CollapsedIslandFace(
+                song = song,
+                now = now,
+                positionMs = positionMs,
+                karaokeSweepEnabled = karaokeSweepEnabled,
+            )
         }
 
         if (menu != null) {
@@ -279,6 +293,7 @@ internal fun DesktopIslandCard(
 private fun ExpandedIslandFace(
     song: Song?,
     now: IslandLines,
+    karaokeSweepEnabled: Boolean,
     positionMs: () -> Long,
     durationMs: () -> Long,
     isPlaying: Boolean,
@@ -322,7 +337,14 @@ private fun ExpandedIslandFace(
                     val at = now.at(index)
                     Column(Modifier.fillMaxWidth()) {
                         IslandLine(text = at.previous, fontSize = 10.sp, active = false)
-                        IslandLine(text = at.current, fontSize = 13.sp, active = true)
+                        IslandLine(
+                            text = at.current,
+                            fontSize = 13.sp,
+                            active = true,
+                            lyric = at.lyricAt(index),
+                            positionMs = positionMs,
+                            karaokeSweepEnabled = karaokeSweepEnabled,
+                        )
                         IslandLine(text = at.next, fontSize = 10.sp, active = false)
                     }
                 }
@@ -414,6 +436,8 @@ private fun ExpandedIslandFace(
 private fun CollapsedIslandFace(
     song: Song?,
     now: IslandLines,
+    positionMs: () -> Long,
+    karaokeSweepEnabled: Boolean,
 ) {
     Row(
         Modifier
@@ -468,7 +492,14 @@ private fun CollapsedIslandFace(
                 val at = now.at(index)
                 Column(Modifier.fillMaxWidth()) {
                     IslandLine(text = at.previous, fontSize = 9.sp, active = false)
-                    IslandLine(text = at.current, fontSize = 12.sp, active = true)
+                    IslandLine(
+                        text = at.current,
+                        fontSize = 12.sp,
+                        active = true,
+                        lyric = at.lyricAt(index),
+                        positionMs = positionMs,
+                        karaokeSweepEnabled = karaokeSweepEnabled,
+                    )
                     IslandLine(text = at.next, fontSize = 9.sp, active = false)
                 }
             }
@@ -484,18 +515,83 @@ private fun IslandLine(
     text: String,
     fontSize: TextUnit,
     active: Boolean,
+    lyric: LyricLine? = null,
+    positionMs: () -> Long = { 0L },
+    karaokeSweepEnabled: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    Text(
-        text = text.ifBlank { " " },
-        color = if (active) Color.White else Color.White.copy(alpha = 0.36f),
-        fontSize = fontSize,
-        fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        textAlign = TextAlign.Center,
-        modifier = modifier.fillMaxWidth(),
-    )
+    val displayText = text.ifBlank { " " }
+    val sweep = active && karaokeSweepEnabled && lyric?.isWordSynced == true
+    var layout by remember(displayText, fontSize) { mutableStateOf<TextLayoutResult?>(null) }
+
+    Box(modifier.fillMaxWidth()) {
+        Text(
+            text = displayText,
+            color = if (sweep) Color.White.copy(alpha = 0.42f)
+            else if (active) Color.White else Color.White.copy(alpha = 0.36f),
+            fontSize = fontSize,
+            fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            onTextLayout = { layout = it },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (sweep) {
+            Text(
+                text = displayText,
+                color = Color.White,
+                fontSize = fontSize,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .drawWithContent {
+                        val measured = layout ?: return@drawWithContent
+                        val textLength = measured.layoutInput.text.length
+                        if (textLength == 0) return@drawWithContent
+                        val visibleLength = measured.getLineEnd(0, visibleEnd = true)
+                            .coerceIn(0, textLength)
+                        if (visibleLength == 0) return@drawWithContent
+                        val revealed = lyric.revealedChars(positionMs())
+                            .coerceIn(0f, visibleLength.toFloat())
+                        if (revealed <= 0f) return@drawWithContent
+                        if (revealed >= visibleLength) {
+                            drawContent()
+                            return@drawWithContent
+                        }
+
+                        val paragraphStart = measured.getLineStart(0)
+                            .coerceIn(0, (textLength - 1).coerceAtLeast(0))
+                        val rtl = measured.getParagraphDirection(paragraphStart) ==
+                            ResolvedTextDirection.Rtl
+                        val lineLeft = measured.getLineLeft(0)
+                        val lineRight = measured.getLineRight(0)
+                        val charIndex = revealed.toInt().coerceIn(0, visibleLength - 1)
+                        val charProgress = revealed - charIndex
+                        val character = measured.getBoundingBox(charIndex)
+                        val edge = if (rtl) {
+                            character.right - character.width * charProgress
+                        } else {
+                            character.left + character.width * charProgress
+                        }
+                        val clipLeft = if (rtl) edge else lineLeft
+                        val clipRight = if (rtl) lineRight else edge
+                        if (clipLeft >= clipRight) return@drawWithContent
+                        clipRect(
+                            left = clipLeft,
+                            top = measured.getLineTop(0),
+                            right = clipRight,
+                            bottom = measured.getLineBottom(0),
+                        ) {
+                            this@drawWithContent.drawContent()
+                        }
+                    },
+            )
+        }
+    }
 }
 
 /**

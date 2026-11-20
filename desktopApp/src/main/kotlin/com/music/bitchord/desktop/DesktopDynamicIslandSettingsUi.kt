@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 /**
  * Settings for the Dynamic Island.
  *
- * Four rows, and that is all there is to say about it. The island used to fill a page of its own:
+ * A short set of rows, and that is all there is to say about it. The island used to fill a page of its own:
  * a live preview, a ladder of layouts, a switch for the cover, one for the transport, one for the
  * progress line, a rule about when to shrink, a transparency slider, six places to put the
  * capsule and a way to drag it somewhere else. Almost all of that was asking the same question
@@ -36,6 +36,7 @@ internal fun DynamicIslandSettingsGroup() {
     val scale by DesktopDynamicIslandSettings.scale.collectAsState()
     val hideWhenPaused by DesktopDynamicIslandSettings.hideWhenPaused.collectAsState()
     val clickThrough by DesktopDynamicIslandSettings.clickThrough.collectAsState()
+    val karaokeSweep by DesktopDynamicIslandSettings.karaokeSweepEnabled.collectAsState()
 
     SettingsToggle(
         title = DesktopStrings["d_island_floating", "Floating island"],
@@ -47,6 +48,16 @@ internal fun DynamicIslandSettingsGroup() {
         onCheckedChange = DesktopDynamicIslandSettings::setEnabled,
     )
     if (!floating) return
+
+    SettingsToggle(
+        title = DesktopStrings["d_island_karaoke_sweep", "Karaoke word highlight"],
+        subtitle = DesktopStrings[
+            "d_island_karaoke_sweep_subtitle",
+            "Highlights each timed word in the floating island while it is sung",
+        ],
+        checked = karaokeSweep,
+        onCheckedChange = DesktopDynamicIslandSettings::setKaraokeSweepEnabled,
+    )
 
     IslandSliderRow(
         title = DesktopStrings["d_island_size", "Island size"],
