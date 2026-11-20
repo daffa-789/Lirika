@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animate
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -12,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -28,8 +30,12 @@ import com.sun.jna.platform.win32.WinUser
 import java.awt.Dimension
 import java.awt.GraphicsConfiguration
 import java.awt.GraphicsEnvironment
+import java.awt.Rectangle
 import java.awt.Toolkit
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.awt.Window as AwtWindow
+import javax.swing.SwingUtilities
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
@@ -156,14 +162,12 @@ internal fun DesktopIslandWindow() {
      * floating in a box of empty space.
      */
     val expansion = remember { mutableFloatStateOf(0f) }
-    // A paused island is still the same island: it keeps its cover, its line and its controls,
-    // and hovering it opens the transport so Play is one press away. It no longer collapses into a
-    // tiny doorbell the moment playback stops.
-    // The island is the player: starting to play expands it, so a song begun with the pointer
-    // away or in another window still shows the capsule — it does not stay a resting pill until
-    // the pointer happens to find the glass.
-    val wantExpanded = !clickThrough &&
-        (hovered.value || menuOpen || seeking || isPlaying)
+    // The resting island is a readout, not a control surface: the cover and the lyric, and
+    // nothing you could press or scrub. It opens for the pointer, the context menu, or a scrub
+    // already in progress — but not merely because a song is playing. An island that stayed open
+    // through the whole song sat over the progress and pause controls of whatever window was
+    // underneath it, which is exactly the interference a top-centre overlay must not create.
+    val wantExpanded = !clickThrough && (hovered.value || menuOpen || seeking)
     LaunchedEffect(wantExpanded) {
         animate(
             initialValue = expansion.floatValue,
@@ -276,6 +280,41 @@ internal fun DesktopIslandWindow() {
         }
 
         /**
+         * The bounds the capsule has asked the window to take, so a resize from anywhere else can
+         * be told apart from the capsule's own and put back. Plain state rather than Compose state:
+         * this is bookkeeping for the window layer, not something the drawing reads.
+         */
+        val wantedBounds = remember { IslandWantedBounds() }
+
+        // A local function rather than a copy of the arithmetic in each effect: the resting pass
+        // and the morph pass must agree to the pixel, or one would "correct" the other.
+        fun applyBounds(grown: Float) {
+            val wanted = if (!showing) {
+                // Nothing to show: the window shrinks to a single pixel, so it neither shows
+                // nor stands between the pointer and whatever is underneath.
+                Rectangle(0, 0, 1, 1)
+            } else {
+                val width = (ISLAND_COLLAPSED_WIDTH +
+                    (ISLAND_EXPANDED_WIDTH - ISLAND_COLLAPSED_WIDTH) * grown) * scale
+                val height = (ISLAND_COLLAPSED_HEIGHT +
+                    (ISLAND_EXPANDED_HEIGHT - ISLAND_COLLAPSED_HEIGHT) * grown) * scale
+                val placed = work?.let { islandPlacedRect(it, width, height) }
+                val x = (placed?.left ?: 0f) * density
+                val y = (placed?.top ?: 0f) * density
+                val w = width * density
+                val h = height * density
+                Rectangle(
+                    x.roundToInt(),
+                    y.roundToInt(),
+                    w.roundToInt(),
+                    h.roundToInt(),
+                )
+            }
+            wantedBounds.value = wanted
+            if (window.bounds != wanted) window.bounds = wanted
+        }
+
+        /**
          * The window follows the morph.
          *
          * Every frame the capsule's size changes, the window that holds it is told its new size
@@ -290,29 +329,52 @@ internal fun DesktopIslandWindow() {
          * Leaving the window's state alone keeps one writer and one size.
          */
         LaunchedEffect(window, scale, density, showing) {
-            snapshotFlow { expansion.floatValue }.collect { grown ->
-                if (!showing) {
-                    // Nothing to show: the window shrinks to a single pixel, so it neither shows
-                    // nor stands between the pointer and whatever is underneath.
-                    window.setBounds(0, 0, 1, 1)
-                    return@collect
+            snapshotFlow { expansion.floatValue }.collect { grown -> applyBounds(grown) }
+        }
+
+        /**
+         * Put the resting capsule on screen before anything moves.
+         *
+         * The remembered window state is a single-pixel square at the top centre, and Compose
+         * applies it as the window is first shown — sometimes *after* the collector above has
+         * already written the capsule's real bounds. While nothing is playing the expansion never
+         * changes again, so no later frame corrected it: the island stayed a 1×1 point that the
+         * pointer could not find and hover, which read as the island having disappeared. Re-assert
+         * the bounds on the next frame, once that first application has gone through.
+         */
+        LaunchedEffect(window, scale, density, showing) {
+            withFrameNanos { }
+            applyBounds(expansion.floatValue)
+        }
+
+        /**
+         * Keep the bounds the capsule chose.
+         *
+         * Belt and braces for the startup race above: whenever the window ends up at a size the
+         * capsule did not ask for, put it back after the current dispatch finishes. This is also
+         * what stops a stray window-manager resize from silently shrinking the island away again,
+         * since the capsule is not a window anyone is meant to resize.
+         */
+        DisposableEffect(window) {
+            val guard = object : ComponentAdapter() {
+                override fun componentResized(event: ComponentEvent) {
+                    val wanted = wantedBounds.value ?: return
+                    if (window.bounds != wanted) {
+                        SwingUtilities.invokeLater {
+                            val latest = wantedBounds.value ?: return@invokeLater
+                            if (window.bounds != latest) {
+                                DesktopTrackLog.log(
+                                    "island window was ${window.width}x${window.height}, " +
+                                        "restored ${latest.width}x${latest.height}",
+                                )
+                                window.bounds = latest
+                            }
+                        }
+                    }
                 }
-                val width = (ISLAND_COLLAPSED_WIDTH +
-                    (ISLAND_EXPANDED_WIDTH - ISLAND_COLLAPSED_WIDTH) * grown) * scale
-                val height = (ISLAND_COLLAPSED_HEIGHT +
-                    (ISLAND_EXPANDED_HEIGHT - ISLAND_COLLAPSED_HEIGHT) * grown) * scale
-                val placed = work?.let { islandPlacedRect(it, width, height) }
-                val x = (placed?.left ?: 0f) * density
-                val y = (placed?.top ?: 0f) * density
-                val w = width * density
-                val h = height * density
-                window.setBounds(
-                    x.roundToInt(),
-                    y.roundToInt(),
-                    w.roundToInt(),
-                    h.roundToInt(),
-                )
             }
+            window.addComponentListener(guard)
+            onDispose { window.removeComponentListener(guard) }
         }
 
         Box(
@@ -350,6 +412,11 @@ internal fun DesktopIslandWindow() {
             }
         }
     }
+}
+
+/** The last bounds the capsule asked for, in device pixels. */
+private class IslandWantedBounds {
+    var value: Rectangle? = null
 }
 
 /**
