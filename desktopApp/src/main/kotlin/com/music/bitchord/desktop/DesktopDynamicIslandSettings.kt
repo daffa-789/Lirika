@@ -13,8 +13,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * places to put it and a way to drag it elsewhere — knobs that all said the same thing, which is
  * "how much of this is showing, and where". The island is part of the screen now: it rests at the
  * top centre and opens when the pointer lands on it. What is left is only what a person
- * genuinely has an opinion about — whether it is on, how big it is, and whether clicks go
- * through it.
+ * genuinely has an opinion about — whether it is on, how big it is (overall, and across, since the
+ * resting pill is where the words live), and whether clicks go through it.
  */
 internal object DesktopDynamicIslandSettings {
 
@@ -47,6 +47,20 @@ internal object DesktopDynamicIslandSettings {
     /** The capsule's size, 0.8×–1.3×, so it can be read on a 4K panel or kept tidy on 1080p. */
     val scale: MutableStateFlow<Float> = MutableStateFlow(persistence.float(KEY_SCALE, 1f))
 
+    /**
+     * The resting capsule's width in dp, before [scale].
+     *
+     * The pill is a lyric strip, and 320 dp of it fits about one short line: on a wide monitor the
+     * words are cut to an ellipsis while there is screen to spare, and on a small one a wide pill
+     * covers the taskbar. So the width is the one thing the island lets a person set outright.
+     *
+     * Its ends belong to the geometry (`islandCollapsedWidth`), which is what clamps this value on
+     * the way in and on every read, so the slider and the glass cannot disagree about what is legal.
+     */
+    val collapsedWidth: MutableStateFlow<Float> = MutableStateFlow(
+        islandCollapsedWidth(persistence.float(KEY_COLLAPSED_WIDTH, ISLAND_COLLAPSED_WIDTH)),
+    )
+
     /** Sweep word-timed lyrics across the current line in the island. */
     val karaokeSweepEnabled: MutableStateFlow<Boolean> =
         MutableStateFlow(persistence.boolean(KEY_KARAOKE_SWEEP, true))
@@ -68,6 +82,12 @@ internal object DesktopDynamicIslandSettings {
         scale.value = clamped
     }
 
+    fun setCollapsedWidth(value: Float) {
+        val clamped = islandCollapsedWidth(value)
+        persistence.saveFloat(KEY_COLLAPSED_WIDTH, clamped)
+        collapsedWidth.value = clamped
+    }
+
     fun setKaraokeSweepEnabled(value: Boolean) =
         writeBoolean(KEY_KARAOKE_SWEEP, value, karaokeSweepEnabled)
 
@@ -83,6 +103,7 @@ internal object DesktopDynamicIslandSettings {
     private const val KEY_HIDE_WHEN_PAUSED = "island_hide_when_paused"
     private const val KEY_CLICK_THROUGH = "island_click_through"
     private const val KEY_SCALE = "island_scale"
+    private const val KEY_COLLAPSED_WIDTH = "island_collapsed_width"
     private const val KEY_KARAOKE_SWEEP = "island_karaoke_sweep"
 
     const val MIN_SCALE = 0.80f

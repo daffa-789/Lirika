@@ -74,6 +74,39 @@ class DesktopIslandGeometryTest {
     }
 
     @Test
+    fun `the resting width is held inside the range the slider offers`() {
+        // The number comes from a preference file, which a hand-edit or an older build can fill
+        // with anything; the capsule must still end up somewhere sane.
+        assertEquals(ISLAND_MIN_COLLAPSED_WIDTH, islandCollapsedWidth(1f), 0.01f)
+        assertEquals(ISLAND_MIN_COLLAPSED_WIDTH, islandCollapsedWidth(239f), 0.01f)
+        assertEquals(420f, islandCollapsedWidth(420f), 0.01f)
+        assertEquals(ISLAND_MAX_COLLAPSED_WIDTH, islandCollapsedWidth(5_000f), 0.01f)
+    }
+
+    @Test
+    fun `widening the pill never makes the open face narrower`() {
+        // The base face is 480 dp, so a pill set past it would otherwise shrink the moment the
+        // pointer landed on it.
+        assertEquals(ISLAND_EXPANDED_WIDTH, islandExpandedWidth(320f), 0.01f)
+        assertEquals(700f, islandExpandedWidth(700f), 0.01f)
+        assertTrue(islandExpandedWidth(600f) >= islandCollapsedWidth(600f))
+        assertTrue(islandExpandedWidth(1_000f) >= islandCollapsedWidth(1_000f))
+    }
+
+    @Test
+    fun `every width the slider offers stays centred and on screen`() {
+        var width = ISLAND_MIN_COLLAPSED_WIDTH
+        while (width <= ISLAND_MAX_COLLAPSED_WIDTH) {
+            val rest = islandPlacedRect(screen, islandCollapsedWidth(width), collapsedHeight)
+            val open = islandPlacedRect(screen, islandExpandedWidth(width), expandedHeight)
+            assertEquals(rest.left + rest.width / 2f, open.left + open.width / 2f, 0.01f)
+            assertTrue(rest.left >= screen.left && rest.right <= screen.right)
+            assertTrue(open.left >= screen.left && open.right <= screen.right)
+            width += 20f
+        }
+    }
+
+    @Test
     fun `the island keeps its place before a song loads`() {
         // A one-pixel window cannot be pressed back into view, so "nothing playing" is a pill on
         // screen rather than a vanished capsule.

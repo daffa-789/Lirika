@@ -93,4 +93,6 @@
     <string name="d_island_top_center">Top center</string>
     <string name="d_island_top_left">Top left</string>
     <string name="d_island_top_right">Top right</string>
+    <string name="d_island_width">Island width</string>
+    <string name="d_island_width_value">%1$d dp</string>
 </resources>

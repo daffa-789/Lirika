@@ -27,13 +27,15 @@ import androidx.compose.ui.unit.dp
  *
  * The island is part of the screen now: it rests at the top centre and opens when the pointer
  * lands on it, so there is nothing to place and nothing to drag. What is left is what a person
- * genuinely has an opinion about: whether it is on, how big it is, and whether clicks go through
- * it.
+ * genuinely has an opinion about: whether it is on, how big it is — overall, and how wide the
+ * resting pill is, since that is what decides how much of a lyric line fits — and whether clicks
+ * go through it.
  */
 @Composable
 internal fun DynamicIslandSettingsGroup() {
     val floating by DesktopDynamicIslandSettings.enabled.collectAsState()
     val scale by DesktopDynamicIslandSettings.scale.collectAsState()
+    val collapsedWidth by DesktopDynamicIslandSettings.collapsedWidth.collectAsState()
     val hideWhenPaused by DesktopDynamicIslandSettings.hideWhenPaused.collectAsState()
     val clickThrough by DesktopDynamicIslandSettings.clickThrough.collectAsState()
     val karaokeSweep by DesktopDynamicIslandSettings.karaokeSweepEnabled.collectAsState()
@@ -67,6 +69,22 @@ internal fun DynamicIslandSettingsGroup() {
         onValueChange = DesktopDynamicIslandSettings::setScale,
     )
 
+    // Width on its own, rather than folding it into the size multiplier: a person with a wide
+    // monitor usually wants more room for the words at the same height, and the two sliders
+    // together say so without making one drag change both.
+    IslandSliderRow(
+        title = DesktopStrings["d_island_width", "Island width"],
+        value = DesktopStrings.format(
+            "d_island_width_value",
+            collapsedWidth.toInt(),
+            fallback = "%1\$d dp",
+        ),
+        slider = collapsedWidth,
+        range = ISLAND_MIN_COLLAPSED_WIDTH..ISLAND_MAX_COLLAPSED_WIDTH,
+        steps = islandWidthSteps(),
+        onValueChange = DesktopDynamicIslandSettings::setCollapsedWidth,
+    )
+
     SettingsToggle(
         title = DesktopStrings["d_island_hide_paused", "Hide while paused"],
         subtitle = DesktopStrings[
@@ -97,6 +115,7 @@ private fun IslandSliderRow(
     value: String,
     slider: Float,
     range: ClosedFloatingPointRange<Float>,
+    steps: Int = 0,
     onValueChange: (Float) -> Unit,
 ) {
     if (!settingsRowVisible(title, value)) return
@@ -109,6 +128,18 @@ private fun IslandSliderRow(
             value = slider,
             onValueChange = onValueChange,
             valueRange = range,
+            steps = steps,
         )
     }
 }
+
+/**
+ * How far the width slider moves at a time, in dp. The stops are worked out from it and from the
+ * slider's own ends, so the read-out lands on whole numbers and cannot drift out of step with the
+ * range the geometry clamps to.
+ */
+private const val WIDTH_STEP_DP = 20f
+
+/** The stops between the width slider's ends, at [WIDTH_STEP_DP] apart. */
+private fun islandWidthSteps(): Int =
+    ((ISLAND_MAX_COLLAPSED_WIDTH - ISLAND_MIN_COLLAPSED_WIDTH) / WIDTH_STEP_DP).toInt() - 1

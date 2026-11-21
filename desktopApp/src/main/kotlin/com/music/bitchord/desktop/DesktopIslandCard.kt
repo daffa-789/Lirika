@@ -76,11 +76,21 @@ import com.music.bitchord.ui.icons.BitChordIcons
  * to carry a Full / Compact / Mini ladder and a switch saying which of them to shrink to — four
  * ways of asking "how much of the song is showing". A Dynamic Island has one shape that changes
  * with what is happening to it, and so does this one.
+ *
+ * The resting width is the one measurement with an opinion attached to it: the pill is a lyric
+ * strip, and how much of a line fits depends on how much screen a person has free. It is a setting
+ * (see `DesktopDynamicIslandSettings.collapsedWidth`); 320 dp is only where it starts.
  */
 internal const val ISLAND_COLLAPSED_WIDTH = 320f
 internal const val ISLAND_COLLAPSED_HEIGHT = 62f
 internal const val ISLAND_EXPANDED_WIDTH = 480f
 internal const val ISLAND_EXPANDED_HEIGHT = 118f
+
+/** From a discreet pill ... */
+internal const val ISLAND_MIN_COLLAPSED_WIDTH = 240f
+
+/** ... to a lyric strip wide enough for a 4K panel. */
+internal const val ISLAND_MAX_COLLAPSED_WIDTH = 900f
 
 /**
  * The three lines the hovering island can show, and the one line the resting island shows.
@@ -184,6 +194,8 @@ internal fun DesktopIslandCard(
     repeatMode: DesktopRepeatMode,
     scale: Float,
     hovered: Boolean,
+    /** The resting pill's width in dp, before [scale] — the one measurement Settings hands out. */
+    collapsedWidth: Float = ISLAND_COLLAPSED_WIDTH,
     /** The window's own morph, 0 at rest and 1 open — the only source of truth for which face to draw. */
     expansion: Float,
     interactive: Boolean,
@@ -215,8 +227,9 @@ internal fun DesktopIslandCard(
     // window that holds it are always the same size, to the pixel.
     val density = LocalDensity.current
     val measured = remember { mutableFloatStateOf(0f) }
-    val collapsed = ISLAND_COLLAPSED_WIDTH * scale
-    val span = (ISLAND_EXPANDED_WIDTH - ISLAND_COLLAPSED_WIDTH) * scale
+    val pillWidth = islandCollapsedWidth(collapsedWidth)
+    val collapsed = pillWidth * scale
+    val span = (islandExpandedWidth(pillWidth) - pillWidth) * scale
 
     Box(
         modifier
@@ -224,7 +237,11 @@ internal fun DesktopIslandCard(
             .onSizeChanged { size ->
                 val width = with(density) { size.width.toDp() }.value
                 measured.floatValue = if (span <= 0f) {
-                    0f
+                    // A pill set wider than the base face does not grow sideways at all, so there is
+                    // no width to read the morph off. The window's own expansion is the number that
+                    // sized the frame, so it is the honest fallback: without it the open face sat at
+                    // "zero grown" and faded its scrub row out on a wide capsule.
+                    expansion
                 } else {
                     ((width - collapsed) / span).coerceIn(0f, 1f)
                 }
