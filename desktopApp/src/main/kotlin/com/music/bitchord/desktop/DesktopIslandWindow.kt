@@ -97,6 +97,27 @@ internal fun islandWindowVisible(hideWhenPaused: Boolean, isPlaying: Boolean): B
     !hideWhenPaused || isPlaying
 
 /**
+ * Whether the capsule is showing its open face.
+ *
+ * Three things always open it: the pointer on the glass, the context menu, and a scrub already
+ * in progress. Playback opens it too, but only when asked for — an island held open through the
+ * whole song sits over the progress and pause controls of whatever window is underneath it, which
+ * is a trade a person should make rather than one the app makes for them.
+ *
+ * Click-through outranks all of it: a capsule that hands its clicks to the window below cannot be
+ * a control surface, however far it has grown.
+ */
+internal fun islandWantsExpanded(
+    clickThrough: Boolean,
+    hovered: Boolean,
+    menuOpen: Boolean,
+    seeking: Boolean,
+    isPlaying: Boolean,
+    expandWhenPlaying: Boolean,
+): Boolean = !clickThrough &&
+    (hovered || menuOpen || seeking || (expandWhenPlaying && isPlaying))
+
+/**
  * The island: a frameless window that stays on screen and changes shape.
  *
  * It used to be drawn inside the main window, which made "hide the app" and "keep the island" the
@@ -129,6 +150,7 @@ internal fun DesktopIslandWindow() {
     val collapsedWidth by DesktopDynamicIslandSettings.collapsedWidth.collectAsState()
     val hideWhenPaused by DesktopDynamicIslandSettings.hideWhenPaused.collectAsState()
     val clickThrough by DesktopDynamicIslandSettings.clickThrough.collectAsState()
+    val expandWhenPlaying by DesktopDynamicIslandSettings.expandWhenPlaying.collectAsState()
 
     val song by DesktopIslandState.currentSong.collectAsState()
     val isPlaying by DesktopIslandState.isPlaying.collectAsState()
@@ -163,12 +185,16 @@ internal fun DesktopIslandWindow() {
      * floating in a box of empty space.
      */
     val expansion = remember { mutableFloatStateOf(0f) }
-    // The resting island is a readout, not a control surface: the cover and the lyric, and
-    // nothing you could press or scrub. It opens for the pointer, the context menu, or a scrub
-    // already in progress — but not merely because a song is playing. An island that stayed open
-    // through the whole song sat over the progress and pause controls of whatever window was
-    // underneath it, which is exactly the interference a top-centre overlay must not create.
-    val wantExpanded = !clickThrough && (hovered.value || menuOpen || seeking)
+    // The resting island is a readout: the cover and the lyric, nothing you could press or scrub,
+    // unless the pointer comes to it or the "open while playing" preference says otherwise.
+    val wantExpanded = islandWantsExpanded(
+        clickThrough = clickThrough,
+        hovered = hovered.value,
+        menuOpen = menuOpen,
+        seeking = seeking,
+        isPlaying = isPlaying,
+        expandWhenPlaying = expandWhenPlaying,
+    )
     LaunchedEffect(wantExpanded) {
         animate(
             initialValue = expansion.floatValue,

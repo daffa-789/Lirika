@@ -65,6 +65,17 @@ internal object DesktopDynamicIslandSettings {
     val karaokeSweepEnabled: MutableStateFlow<Boolean> =
         MutableStateFlow(persistence.boolean(KEY_KARAOKE_SWEEP, true))
 
+    /**
+     * Opens the capsule for the whole song rather than only under the pointer.
+     *
+     * This is the difference between a readout and a control surface: open, the island carries the
+     * transport and the scrub bar, and it sits over whatever window is underneath them. Some people
+     * want exactly that and some find it in the way, so it is a preference and not a decision made
+     * on their behalf — switched off, the capsule rests as the lyric pill and opens on hover.
+     */
+    val expandWhenPlaying: MutableStateFlow<Boolean> =
+        MutableStateFlow(persistence.boolean(KEY_EXPAND_WHEN_PLAYING, true))
+
     fun toggle() = setEnabled(!enabled.value)
 
     fun setEnabled(value: Boolean) {
@@ -91,6 +102,9 @@ internal object DesktopDynamicIslandSettings {
     fun setKaraokeSweepEnabled(value: Boolean) =
         writeBoolean(KEY_KARAOKE_SWEEP, value, karaokeSweepEnabled)
 
+    fun setExpandWhenPlaying(value: Boolean) =
+        writeBoolean(KEY_EXPAND_WHEN_PLAYING, value, expandWhenPlaying)
+
     private fun writeBoolean(key: String, value: Boolean, into: MutableStateFlow<Boolean>) {
         persistence.saveBoolean(key, value)
         into.value = value
@@ -105,6 +119,7 @@ internal object DesktopDynamicIslandSettings {
     private const val KEY_SCALE = "island_scale"
     private const val KEY_COLLAPSED_WIDTH = "island_collapsed_width"
     private const val KEY_KARAOKE_SWEEP = "island_karaoke_sweep"
+    private const val KEY_EXPAND_WHEN_PLAYING = "island_expand_when_playing"
 
     const val MIN_SCALE = 0.80f
     const val MAX_SCALE = 1.30f

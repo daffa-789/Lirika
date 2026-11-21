@@ -38,6 +38,7 @@ internal fun DynamicIslandSettingsGroup() {
     val collapsedWidth by DesktopDynamicIslandSettings.collapsedWidth.collectAsState()
     val hideWhenPaused by DesktopDynamicIslandSettings.hideWhenPaused.collectAsState()
     val clickThrough by DesktopDynamicIslandSettings.clickThrough.collectAsState()
+    val expandWhenPlaying by DesktopDynamicIslandSettings.expandWhenPlaying.collectAsState()
     val karaokeSweep by DesktopDynamicIslandSettings.karaokeSweepEnabled.collectAsState()
 
     SettingsToggle(
@@ -83,6 +84,16 @@ internal fun DynamicIslandSettingsGroup() {
         range = ISLAND_MIN_COLLAPSED_WIDTH..ISLAND_MAX_COLLAPSED_WIDTH,
         steps = islandWidthSteps(),
         onValueChange = DesktopDynamicIslandSettings::setCollapsedWidth,
+    )
+
+    SettingsToggle(
+        title = DesktopStrings["d_island_expand_playing", "Open while playing"],
+        subtitle = DesktopStrings[
+            "d_island_expand_playing_subtitle",
+            "Keeps the capsule open with the transport and scrub bar for the whole song. It then covers whatever sits at the top centre of the screen underneath — switch it off to keep the capsule as a lyric pill that opens under the pointer.",
+        ],
+        checked = expandWhenPlaying,
+        onCheckedChange = DesktopDynamicIslandSettings::setExpandWhenPlaying,
     )
 
     SettingsToggle(

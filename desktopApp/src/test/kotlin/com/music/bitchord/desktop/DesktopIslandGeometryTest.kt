@@ -118,4 +118,42 @@ class DesktopIslandGeometryTest {
         assertTrue(islandWindowVisible(hideWhenPaused = true, isPlaying = true))
         assertTrue(!islandWindowVisible(hideWhenPaused = true, isPlaying = false))
     }
+
+    @Test
+    fun `the capsule opens on the pointer and, when asked, on playback`() {
+        val resting = islandWantsExpanded(
+            clickThrough = false, hovered = false, menuOpen = false,
+            seeking = false, isPlaying = true, expandWhenPlaying = false,
+        )
+        assertTrue(!resting, "a lyric pill rests closed")
+
+        assertTrue(islandWantsExpanded(
+            clickThrough = false, hovered = true, menuOpen = false,
+            seeking = false, isPlaying = false, expandWhenPlaying = false,
+        ))
+        assertTrue(islandWantsExpanded(
+            clickThrough = false, hovered = false, menuOpen = true,
+            seeking = false, isPlaying = false, expandWhenPlaying = false,
+        ))
+        assertTrue(islandWantsExpanded(
+            clickThrough = false, hovered = false, menuOpen = false,
+            seeking = true, isPlaying = false, expandWhenPlaying = false,
+        ))
+        assertTrue(islandWantsExpanded(
+            clickThrough = false, hovered = false, menuOpen = false,
+            seeking = false, isPlaying = true, expandWhenPlaying = true,
+        ), "playback opens it when the preference is on")
+        assertTrue(!islandWantsExpanded(
+            clickThrough = false, hovered = false, menuOpen = false,
+            seeking = false, isPlaying = false, expandWhenPlaying = true,
+        ), "a paused song closes it again")
+    }
+
+    @Test
+    fun `click-through outranks every reason to open`() {
+        assertTrue(!islandWantsExpanded(
+            clickThrough = true, hovered = true, menuOpen = true,
+            seeking = true, isPlaying = true, expandWhenPlaying = true,
+        ))
+    }
 }

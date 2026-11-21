@@ -64,6 +64,8 @@
     <string name="d_island_bottom_right">Bottom right</string>
     <string name="d_island_click_through">Click-through</string>
     <string name="d_island_click_through_subtitle">Clicks over the capsule go to the window underneath. Switch it off here to grab the capsule again.</string>
+    <string name="d_island_expand_playing">Open while playing</string>
+    <string name="d_island_expand_playing_subtitle">Keeps the capsule open with the transport and scrub bar for the whole song. It then covers whatever sits at the top centre of the screen underneath — switch it off to keep the capsule as a lyric pill that opens under the pointer.</string>
     <string name="d_island_up_next">Up next</string>
     <string name="d_island_up_next_more">…and more in the queue</string>
     <string name="d_island_open_app">Open Lirika…</string>

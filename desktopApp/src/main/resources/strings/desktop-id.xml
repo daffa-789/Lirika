@@ -62,6 +62,8 @@
     <string name="d_island_bottom_right">Bawah kanan</string>
     <string name="d_island_click_through">Klik tembus</string>
     <string name="d_island_click_through_subtitle">Klik di atas kapsul diteruskan ke jendela di bawahnya. Matikan di sini untuk bisa menggeser kapsul lagi.</string>
+    <string name="d_island_expand_playing">Tetap terbuka saat memutar</string>
+    <string name="d_island_expand_playing_subtitle">Kapsul tetap terbuka lengkap dengan tombol pemutaran dan bilah seek selama lagu berlangsung. Posisi itu menutupi jendela di bagian atas tengah layar di bawahnya — matikan kalau kapsul cukup jadi strip lirik yang membuka saat disentuh kursor.</string>
     <string name="d_island_up_next">Berikutnya</string>
     <string name="d_island_up_next_more">…dan masih ada lagi di antrean</string>
     <string name="d_island_open_app">Buka Lirika…</string>
