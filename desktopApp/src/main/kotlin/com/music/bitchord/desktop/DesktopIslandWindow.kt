@@ -118,6 +118,20 @@ internal fun islandWantsExpanded(
     (hovered || menuOpen || seeking || (expandWhenPlaying && isPlaying))
 
 /**
+ * Whether the open face carries the transport and the scrub bar, or only the cover and the lyric.
+ *
+ * Opening for playback makes the song visible; it does not ask for buttons that sit over the
+ * window underneath. Those come out when the pointer is on the glass, when the menu is up, or
+ * while a press is being dragged along the bar — the same reasons the capsule opens at all, minus
+ * the one that is only about being seen.
+ */
+internal fun islandShowsControls(
+    hovered: Boolean,
+    menuOpen: Boolean,
+    seeking: Boolean,
+): Boolean = hovered || menuOpen || seeking
+
+/**
  * The island: a frameless window that stays on screen and changes shape.
  *
  * It used to be drawn inside the main window, which made "hide the app" and "keep the island" the
@@ -422,6 +436,7 @@ internal fun DesktopIslandWindow() {
                         scale = scale,
                         collapsedWidth = collapsedWidth,
                         hovered = hovered.value,
+                        controlsVisible = islandShowsControls(hovered.value, menuOpen, seeking),
                         expansion = expansion.floatValue,
                         interactive = true,
                         onPlayPause = { DesktopIslandState.onPlayPause?.invoke() },

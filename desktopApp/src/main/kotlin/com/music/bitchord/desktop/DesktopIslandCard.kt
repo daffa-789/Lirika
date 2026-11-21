@@ -199,6 +199,14 @@ internal fun DesktopIslandCard(
     /** The window's own morph, 0 at rest and 1 open — the only source of truth for which face to draw. */
     expansion: Float,
     interactive: Boolean,
+    /**
+     * Whether the transport and the scrub bar belong on the open face.
+     *
+     * Playback opens the capsule so the song is visible, but the controls are only asked for once
+     * the pointer comes to it: until then the face is the cover and the lyric alone, and nothing
+     * else is sitting over the window underneath.
+     */
+    controlsVisible: Boolean = true,
     onPlayPause: () -> Unit = {},
     onNext: () -> Unit = {},
     onPrevious: () -> Unit = {},
@@ -275,6 +283,7 @@ internal fun DesktopIslandCard(
                 onVolumeChange = { DesktopPlayerHost.onVolumeChange(it) },
                 face = measured,
                 interactive = interactive,
+                controlsVisible = controlsVisible,
                 onSeek = onSeek,
                 onSeekStarted = onSeekStarted,
                 onSeekFinished = onSeekFinished,
@@ -319,6 +328,7 @@ private fun ExpandedIslandFace(
     onVolumeChange: (Float) -> Unit,
     face: FloatState,
     interactive: Boolean,
+    controlsVisible: Boolean,
     onSeek: ((Float) -> Unit)?,
     onSeekStarted: () -> Unit,
     onSeekFinished: () -> Unit,
@@ -379,8 +389,10 @@ private fun ExpandedIslandFace(
             )
         }
 
-        // Progress sits between the lyrics and the controls.
-        if (onSeek != null) {
+        // Progress sits between the lyrics and the controls, and both belong to the hovered face:
+        // a capsule that is open because a song is playing shows the lyric alone until the pointer
+        // comes to it.
+        if (onSeek != null && controlsVisible) {
             Box(Modifier.graphicsLayer { alpha = ((face.floatValue - 0.5f) / 0.5f).coerceIn(0f, 1f) }) {
                 IslandSeekRow(
                     positionMs = positionMs,
@@ -393,53 +405,55 @@ private fun ExpandedIslandFace(
         }
 
         // Controls centred on the bottom row, volume at the end.
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(bottom = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IslandControlButton(
-                icon = Icons.Rounded.FastRewind,
-                tooltip = "Previous",
-                size = 26.dp,
-                iconSize = 14.dp,
-                enabled = interactive,
-                onClick = onPrevious,
-            )
-            IslandControlButton(
-                icon = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                tooltip = if (isPlaying) "Pause" else "Play",
-                size = 32.dp,
-                iconSize = 18.dp,
-                isPrimary = true,
-                enabled = interactive,
-                onClick = onPlayPause,
-            )
-            IslandControlButton(
-                icon = Icons.Rounded.FastForward,
-                tooltip = "Next",
-                size = 26.dp,
-                iconSize = 14.dp,
-                enabled = interactive,
-                onClick = onNext,
-            )
-            Icon(
-                Icons.AutoMirrored.Rounded.VolumeUp,
-                contentDescription = "Volume",
-                tint = Color.White.copy(alpha = 0.70f),
-                modifier = Modifier.size(14.dp),
-            )
-            DesktopThinSlider(
-                value = volume.coerceIn(0f, 1f),
-                onValueChange = onVolumeChange,
-                modifier = Modifier.width(46.dp),
-                idleHeight = 3.dp,
-                activeHeight = 5.dp,
-                activeColor = Color.White.copy(alpha = 0.88f),
-                inactiveColor = Color.White.copy(alpha = 0.20f),
-            )
+        if (controlsVisible) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IslandControlButton(
+                    icon = Icons.Rounded.FastRewind,
+                    tooltip = "Previous",
+                    size = 26.dp,
+                    iconSize = 14.dp,
+                    enabled = interactive,
+                    onClick = onPrevious,
+                )
+                IslandControlButton(
+                    icon = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                    tooltip = if (isPlaying) "Pause" else "Play",
+                    size = 32.dp,
+                    iconSize = 18.dp,
+                    isPrimary = true,
+                    enabled = interactive,
+                    onClick = onPlayPause,
+                )
+                IslandControlButton(
+                    icon = Icons.Rounded.FastForward,
+                    tooltip = "Next",
+                    size = 26.dp,
+                    iconSize = 14.dp,
+                    enabled = interactive,
+                    onClick = onNext,
+                )
+                Icon(
+                    Icons.AutoMirrored.Rounded.VolumeUp,
+                    contentDescription = "Volume",
+                    tint = Color.White.copy(alpha = 0.70f),
+                    modifier = Modifier.size(14.dp),
+                )
+                DesktopThinSlider(
+                    value = volume.coerceIn(0f, 1f),
+                    onValueChange = onVolumeChange,
+                    modifier = Modifier.width(46.dp),
+                    idleHeight = 3.dp,
+                    activeHeight = 5.dp,
+                    activeColor = Color.White.copy(alpha = 0.88f),
+                    inactiveColor = Color.White.copy(alpha = 0.20f),
+                )
+            }
         }
     }
 }

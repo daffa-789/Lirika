@@ -156,4 +156,14 @@ class DesktopIslandGeometryTest {
             seeking = true, isPlaying = true, expandWhenPlaying = true,
         ))
     }
+
+    @Test
+    fun `the controls wait for the pointer even while playback holds the capsule open`() {
+        // Being open is not the same as being used: a capsule open because a song is running shows
+        // the cover and the lyric, and nothing over the window underneath until it is reached for.
+        assertTrue(islandShowsControls(hovered = true, menuOpen = false, seeking = false))
+        assertTrue(islandShowsControls(hovered = false, menuOpen = true, seeking = false))
+        assertTrue(islandShowsControls(hovered = false, menuOpen = false, seeking = true))
+        assertTrue(!islandShowsControls(hovered = false, menuOpen = false, seeking = false))
+    }
 }

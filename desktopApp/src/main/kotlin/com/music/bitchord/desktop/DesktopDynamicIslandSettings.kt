@@ -66,12 +66,11 @@ internal object DesktopDynamicIslandSettings {
         MutableStateFlow(persistence.boolean(KEY_KARAOKE_SWEEP, true))
 
     /**
-     * Opens the capsule for the whole song rather than only under the pointer.
+     * Keeps the capsule open for the whole song rather than only under the pointer.
      *
-     * This is the difference between a readout and a control surface: open, the island carries the
-     * transport and the scrub bar, and it sits over whatever window is underneath them. Some people
-     * want exactly that and some find it in the way, so it is a preference and not a decision made
-     * on their behalf — switched off, the capsule rests as the lyric pill and opens on hover.
+     * Open, the capsule shows the cover and the lyric at the larger size; the transport and the
+     * scrub bar still wait for the pointer (see `islandShowsControls`), so this is about being read
+     * rather than being used. Switched off, the capsule rests as the lyric pill and opens on hover.
      */
     val expandWhenPlaying: MutableStateFlow<Boolean> =
         MutableStateFlow(persistence.boolean(KEY_EXPAND_WHEN_PLAYING, true))
