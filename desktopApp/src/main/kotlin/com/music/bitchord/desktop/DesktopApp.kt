@@ -539,10 +539,11 @@ fun BitChordDesktopApp() {
     var dolbyAtmos by remember { mutableStateOf(persistence.boolean("dolby_atmos", true)) }
     var skipSilence by remember { mutableStateOf(persistence.boolean("skip_silence", false)) }
     var outputPrecision by remember { mutableStateOf(persistence.string("output_precision", "PCM_16")) }
-    // The blob backdrop the mesh replaced, kept as an opt-out.
-    var legacyMeshGradient by remember { mutableStateOf(persistence.boolean("legacy_mesh_gradient", false)) }
-    // Motion artwork is optional and decodes frames continuously; keep it off until requested.
-    var animatedCanvas by remember { mutableStateOf(persistence.boolean("animated_canvas", false)) }
+    // These three renderings are retired: the player keeps a square cover on its normal backdrop,
+    // with no motion artwork. Ignore values saved by an older build — there is no row to turn them
+    // back on, so leaving them live would only revive effects the settings page no longer offers.
+    var legacyMeshGradient by remember { mutableStateOf(false) }
+    var animatedCanvas by remember { mutableStateOf(false) }
     var showNerdStats by remember { mutableStateOf(persistence.boolean("show_nerd_stats", false)) }
     var syncedLyrics by remember {
         mutableStateOf(persistence.boolean(DesktopLyricsClient.KEY_SYNCED_LYRICS, true))
@@ -555,7 +556,7 @@ fun BitChordDesktopApp() {
     }
     var lyricsOrder by remember { mutableStateOf(persistence.lyricsSourceOrder()) }
     var lyricsOn by remember { mutableStateOf(persistence.lyricsEnabledSources()) }
-    var fullBleedArtwork by remember { mutableStateOf(persistence.boolean("full_bleed_artwork", false)) }
+    var fullBleedArtwork by remember { mutableStateOf(false) }
     var accounts by remember { mutableStateOf(DesktopAccounts.accounts()) }
     var activeAccountId by remember { mutableStateOf(DesktopAccounts.activeAccountId()) }
     var activeProfileId by remember { mutableStateOf(DesktopAccounts.activeProfileId()) }
@@ -5412,24 +5413,8 @@ private fun DesktopSettingsScreen(
                             DesktopAppearanceSettings::setAmbientBackdrop,
                         )
                     }
-                    SettingsToggle(
-                        DesktopStrings["full_screen_cover_art", "Full-screen cover art"],
-                        DesktopStrings["full_screen_cover_art_subtitle", "Runs the cover to the edges of the player instead of a square sleeve"],
-                        fullBleedArtwork,
-                        onFullBleedArtworkChange,
-                    )
-                    SettingsToggle(
-                        DesktopStrings["legacy_mesh_gradient", "Legacy mesh gradient"],
-                        DesktopStrings["d_use_the_older_blob_backdrop_behind_the_player", "Use the older blob backdrop behind the player"],
-                        legacyMeshGradient,
-                        onLegacyMeshGradientChange,
-                    )
-                    SettingsToggle(
-                        DesktopStrings["d_animated_canvas", "Animated canvas"],
-                        DesktopStrings["d_show_motion_artwork_when_it_is_available", "Show motion artwork when it is available"],
-                        animatedCanvas,
-                        onAnimatedCanvasChange,
-                    )
+                    // Full-screen cover art, the legacy mesh backdrop and motion artwork are retired:
+                    // no rows here, and the three settings stay off in the shared player below.
                 }
             }
             if (section == DesktopSettingsSection.DYNAMIC_ISLAND) item {
