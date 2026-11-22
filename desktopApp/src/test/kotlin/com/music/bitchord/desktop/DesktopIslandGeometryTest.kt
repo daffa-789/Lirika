@@ -68,10 +68,33 @@ class DesktopIslandGeometryTest {
     }
 
     @Test
-    fun `the capsule has one fixed size, wide enough to read and wider when it opens`() {
-        assertEquals(420f, collapsedWidth, 0.01f)
-        assertTrue(expandedWidth > collapsedWidth)
+    fun `the resting width starts readable and stays inside the slider range`() {
+        assertEquals(420f, ISLAND_COLLAPSED_WIDTH, 0.01f)
+        assertEquals(ISLAND_MIN_COLLAPSED_WIDTH, islandCollapsedWidth(1f), 0.01f)
+        assertEquals(420f, islandCollapsedWidth(420f), 0.01f)
+        assertEquals(ISLAND_MAX_COLLAPSED_WIDTH, islandCollapsedWidth(5_000f), 0.01f)
         assertTrue(expandedHeight > collapsedHeight)
+    }
+
+    @Test
+    fun `widening the pill never makes the open face narrower`() {
+        assertEquals(ISLAND_EXPANDED_WIDTH, islandExpandedWidth(320f), 0.01f)
+        assertEquals(700f, islandExpandedWidth(700f), 0.01f)
+        assertTrue(islandExpandedWidth(600f) >= islandCollapsedWidth(600f))
+        assertTrue(islandExpandedWidth(1_000f) >= islandCollapsedWidth(1_000f))
+    }
+
+    @Test
+    fun `every width the slider offers stays centred and on screen`() {
+        var width = ISLAND_MIN_COLLAPSED_WIDTH
+        while (width <= ISLAND_MAX_COLLAPSED_WIDTH) {
+            val rest = islandPlacedRect(screen, islandCollapsedWidth(width), collapsedHeight)
+            val open = islandPlacedRect(screen, islandExpandedWidth(width), expandedHeight)
+            assertEquals(rest.left + rest.width / 2f, open.left + open.width / 2f, 0.01f)
+            assertTrue(rest.left >= screen.left && rest.right <= screen.right)
+            assertTrue(open.left >= screen.left && open.right <= screen.right)
+            width += 20f
+        }
     }
 
     @Test

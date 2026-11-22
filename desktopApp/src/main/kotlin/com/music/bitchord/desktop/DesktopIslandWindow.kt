@@ -160,6 +160,7 @@ internal fun DesktopIslandWindow() {
 
     val hideWhenPaused by DesktopDynamicIslandSettings.hideWhenPaused.collectAsState()
     val clickThrough by DesktopDynamicIslandSettings.clickThrough.collectAsState()
+    val collapsedWidth by DesktopDynamicIslandSettings.collapsedWidth.collectAsState()
 
     val song by DesktopIslandState.currentSong.collectAsState()
     val isPlaying by DesktopIslandState.isPlaying.collectAsState()
@@ -333,8 +334,8 @@ internal fun DesktopIslandWindow() {
                 // nor stands between the pointer and whatever is underneath.
                 Rectangle(0, 0, 1, 1)
             } else {
-                val width = ISLAND_COLLAPSED_WIDTH +
-                    (ISLAND_EXPANDED_WIDTH - ISLAND_COLLAPSED_WIDTH) * grown
+                val pill = islandCollapsedWidth(collapsedWidth)
+                val width = pill + (islandExpandedWidth(pill) - pill) * grown
                 val height = ISLAND_COLLAPSED_HEIGHT +
                     (ISLAND_EXPANDED_HEIGHT - ISLAND_COLLAPSED_HEIGHT) * grown
                 val placed = work?.let { islandPlacedRect(it, width, height) }
@@ -367,7 +368,7 @@ internal fun DesktopIslandWindow() {
          * different sizes, and the window juddered between them on every frame of the morph.
          * Leaving the window's state alone keeps one writer and one size.
          */
-        LaunchedEffect(window, density, showing) {
+        LaunchedEffect(window, collapsedWidth, density, showing) {
             snapshotFlow { expansion.floatValue }.collect { grown -> applyBounds(grown) }
         }
 
@@ -381,7 +382,7 @@ internal fun DesktopIslandWindow() {
          * pointer could not find and hover, which read as the island having disappeared. Re-assert
          * the bounds on the next frame, once that first application has gone through.
          */
-        LaunchedEffect(window, density, showing) {
+        LaunchedEffect(window, collapsedWidth, density, showing) {
             withFrameNanos { }
             applyBounds(expansion.floatValue)
         }
@@ -432,6 +433,7 @@ internal fun DesktopIslandWindow() {
                         isPlaying = isPlaying,
                         repeatMode = repeatMode,
                         hovered = hovered.value,
+                        collapsedWidth = collapsedWidth,
                         controlsVisible = islandShowsControls(hovered.value, menuOpen, seeking),
                         expansion = expansion.floatValue,
                         interactive = true,

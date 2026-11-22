@@ -90,4 +90,6 @@
     <string name="d_island_top_center">Atas tengah</string>
     <string name="d_island_top_left">Atas kiri</string>
     <string name="d_island_top_right">Atas kanan</string>
+    <string name="d_island_width">Lebar island</string>
+    <string name="d_island_width_value">%1$d dp</string>
 </resources>

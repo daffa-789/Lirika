@@ -29,6 +29,24 @@ internal class IslandScreen(
 )
 
 /**
+ * The resting pill's width for a configured value, kept inside the range Settings offers.
+ *
+ * Clamped rather than trusted: the number comes out of a preference file that a previous version
+ * of the app, or an edited one, may have put anything into.
+ */
+internal fun islandCollapsedWidth(widthDp: Float): Float =
+    widthDp.coerceIn(ISLAND_MIN_COLLAPSED_WIDTH, ISLAND_MAX_COLLAPSED_WIDTH)
+
+/**
+ * The width of the open face, for a resting width.
+ *
+ * The face never takes less than the pill already has: a pill wider than the base 480 dp opens
+ * downward only, instead of jumping inwards at the moment it was meant to be opening.
+ */
+internal fun islandExpandedWidth(collapsedWidthDp: Float): Float =
+    maxOf(islandCollapsedWidth(collapsedWidthDp), ISLAND_EXPANDED_WIDTH)
+
+/**
  * Where the capsule rests on a screen, for a given size.
  *
  * The island is pinned to the very top centre of the screen: it is part of the display, the way a

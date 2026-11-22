@@ -77,13 +77,19 @@ import com.music.bitchord.ui.icons.BitChordIcons
  * ways of asking "how much of the song is showing". A Dynamic Island has one shape that changes
  * with what is happening to it, and so does this one.
  *
- * Both widths are fixed: the resting pill is wide enough to read a line of lyric, and the open
- * face is a little wider. There are no size sliders to keep in step with the glass.
+ * The resting width is a setting: 420 dp by default, wide enough for a line of lyric. The open
+ * face never takes less than that pill, so widening it cannot make the island shrink as it opens.
  */
 internal const val ISLAND_COLLAPSED_WIDTH = 420f
 internal const val ISLAND_COLLAPSED_HEIGHT = 62f
 internal const val ISLAND_EXPANDED_WIDTH = 480f
 internal const val ISLAND_EXPANDED_HEIGHT = 118f
+
+/** The narrowest the lyric strip may be squeezed. */
+internal const val ISLAND_MIN_COLLAPSED_WIDTH = 320f
+
+/** The widest it may grow, for wide monitors and 4K panels. */
+internal const val ISLAND_MAX_COLLAPSED_WIDTH = 900f
 
 /**
  * The three lines the hovering island can show, and the one line the resting island shows.
@@ -186,6 +192,8 @@ internal fun DesktopIslandCard(
     isPlaying: Boolean,
     repeatMode: DesktopRepeatMode,
     hovered: Boolean,
+    /** The resting pill's width in dp — the one measurement Settings hands out. */
+    collapsedWidth: Float = ISLAND_COLLAPSED_WIDTH,
     /** The window's own morph, 0 at rest and 1 open — the only source of truth for which face to draw. */
     expansion: Float,
     interactive: Boolean,
@@ -224,15 +232,23 @@ internal fun DesktopIslandCard(
     // window that holds it are always the same size, to the pixel.
     val density = LocalDensity.current
     val measured = remember { mutableFloatStateOf(0f) }
-    val collapsed = ISLAND_COLLAPSED_WIDTH
-    val span = ISLAND_EXPANDED_WIDTH - collapsed
+    val pillWidth = islandCollapsedWidth(collapsedWidth)
+    val collapsed = pillWidth
+    val span = islandExpandedWidth(pillWidth) - pillWidth
 
     Box(
         modifier
             .fillMaxSize()
             .onSizeChanged { size ->
                 val width = with(density) { size.width.toDp() }.value
-                measured.floatValue = ((width - collapsed) / span).coerceIn(0f, 1f)
+                measured.floatValue = if (span <= 0f) {
+                    // A pill wider than the base face does not grow sideways at all, so there is
+                    // no width to read the morph off. The window's own expansion sized the frame,
+                    // so it is the honest fallback for the open face's scrub row.
+                    expansion
+                } else {
+                    ((width - collapsed) / span).coerceIn(0f, 1f)
+                }
             }
             .clip(RectangleShape)
             .background(glass)
