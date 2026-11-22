@@ -87,22 +87,24 @@ internal object DesktopIslandClickThrough {
 }
 
 /**
- * Whether the island window keeps its place on screen.
+ * Whether the island window is on screen.
  *
- * Only the explicit "hide while paused" preference takes it away. Whether a song has been loaded
- * yet is deliberately not a factor: the capsule draws its own "nothing playing" pill, and making
- * the window a pixel until the first song arrives leaves nothing to click to bring it back.
+ * It remains a single pixel until playback has actually started in this session: opening the app
+ * must not place a capsule over the display with a song restored from the last run. The first play
+ * latches it on screen; after that, only the explicit "hide while paused" preference takes it away.
  */
-internal fun islandWindowVisible(hideWhenPaused: Boolean, isPlaying: Boolean): Boolean =
-    !hideWhenPaused || isPlaying
+internal fun islandWindowVisible(
+    hideWhenPaused: Boolean,
+    isPlaying: Boolean,
+    playbackStarted: Boolean,
+): Boolean = playbackStarted && (!hideWhenPaused || isPlaying)
 
 /**
  * Whether the capsule is showing its open face.
  *
- * Three things always open it: the pointer on the glass, the context menu, and a scrub already
- * in progress. Playback opens it too, but only when asked for — an island held open through the
- * whole song sits over the progress and pause controls of whatever window is underneath it, which
- * is a trade a person should make rather than one the app makes for them.
+ * Three things open it: the pointer on the glass, the context menu, and a scrub already in
+ * progress. Playing a song is not one of them — the island stays a wide, readable pill while the
+ * song runs and grows only when it is reached for.
  *
  * Click-through outranks all of it: a capsule that hands its clicks to the window below cannot be
  * a control surface, however far it has grown.
@@ -112,18 +114,14 @@ internal fun islandWantsExpanded(
     hovered: Boolean,
     menuOpen: Boolean,
     seeking: Boolean,
-    isPlaying: Boolean,
-    expandWhenPlaying: Boolean,
-): Boolean = !clickThrough &&
-    (hovered || menuOpen || seeking || (expandWhenPlaying && isPlaying))
+): Boolean = !clickThrough && (hovered || menuOpen || seeking)
 
 /**
  * Whether the open face carries the transport and the scrub bar, or only the cover and the lyric.
  *
- * Opening for playback makes the song visible; it does not ask for buttons that sit over the
- * window underneath. Those come out when the pointer is on the glass, when the menu is up, or
- * while a press is being dragged along the bar — the same reasons the capsule opens at all, minus
- * the one that is only about being seen.
+ * The cover and the lyric are there whenever the face is open. Buttons that sit over the window
+ * underneath come out only when the pointer is on the glass, when the menu is up, or while a press
+ * is being dragged along the bar — the same reasons the capsule opens at all.
  */
 internal fun islandShowsControls(
     hovered: Boolean,
@@ -160,11 +158,8 @@ internal fun DesktopIslandWindow() {
     // An off island is no island: no window, no composition, nothing to weigh the process down.
     if (!enabled) return
 
-    val scale by DesktopDynamicIslandSettings.scale.collectAsState()
-    val collapsedWidth by DesktopDynamicIslandSettings.collapsedWidth.collectAsState()
     val hideWhenPaused by DesktopDynamicIslandSettings.hideWhenPaused.collectAsState()
     val clickThrough by DesktopDynamicIslandSettings.clickThrough.collectAsState()
-    val expandWhenPlaying by DesktopDynamicIslandSettings.expandWhenPlaying.collectAsState()
 
     val song by DesktopIslandState.currentSong.collectAsState()
     val isPlaying by DesktopIslandState.isPlaying.collectAsState()
@@ -174,6 +169,13 @@ internal fun DesktopIslandWindow() {
     var menuOpen by remember { mutableStateOf(false) }
     // True while the pointer is down on the scrub bar, so the same drag scrubs the song.
     var seeking by remember { mutableStateOf(false) }
+
+    // The island is born hidden. The first play latches it on screen; pausing alone does not undo
+    // that, which is why this is a latch rather than a read of `isPlaying`.
+    var playbackStarted by remember { mutableStateOf(false) }
+    LaunchedEffect(isPlaying) {
+        if (isPlaying) playbackStarted = true
+    }
 
     /**
      * Whether the pointer is on the capsule.
@@ -199,15 +201,13 @@ internal fun DesktopIslandWindow() {
      * floating in a box of empty space.
      */
     val expansion = remember { mutableFloatStateOf(0f) }
-    // The resting island is a readout: the cover and the lyric, nothing you could press or scrub,
-    // unless the pointer comes to it or the "open while playing" preference says otherwise.
+    // The island is a readout: a wide pill with the cover and the lyric, not a control surface
+    // until the pointer comes to it (or a menu or scrub is under way).
     val wantExpanded = islandWantsExpanded(
         clickThrough = clickThrough,
         hovered = hovered.value,
         menuOpen = menuOpen,
         seeking = seeking,
-        isPlaying = isPlaying,
-        expandWhenPlaying = expandWhenPlaying,
     )
     LaunchedEffect(wantExpanded) {
         animate(
@@ -217,11 +217,9 @@ internal fun DesktopIslandWindow() {
         ) { value, _ -> expansion.floatValue = value }
     }
 
-    // Hide only on the explicit "hide while paused" preference. The capsule used to be reduced to
-    // a pixel whenever no song was loaded yet, which made it look as though a press had killed it:
-    // a one-pixel window at (0, 0) cannot be pressed back into view. The card already draws a
-    // "nothing playing" pill for that state, so let it keep its place on screen.
-    val showing = islandWindowVisible(hideWhenPaused, isPlaying)
+    // A fresh app keeps the island at one pixel until a song actually plays. After that, only the
+    // explicit "hide while paused" preference takes it off screen.
+    val showing = islandWindowVisible(hideWhenPaused, isPlaying, playbackStarted)
 
     /**
      * The window's state.
@@ -335,10 +333,10 @@ internal fun DesktopIslandWindow() {
                 // nor stands between the pointer and whatever is underneath.
                 Rectangle(0, 0, 1, 1)
             } else {
-                val pill = islandCollapsedWidth(collapsedWidth)
-                val width = (pill + (islandExpandedWidth(pill) - pill) * grown) * scale
-                val height = (ISLAND_COLLAPSED_HEIGHT +
-                    (ISLAND_EXPANDED_HEIGHT - ISLAND_COLLAPSED_HEIGHT) * grown) * scale
+                val width = ISLAND_COLLAPSED_WIDTH +
+                    (ISLAND_EXPANDED_WIDTH - ISLAND_COLLAPSED_WIDTH) * grown
+                val height = ISLAND_COLLAPSED_HEIGHT +
+                    (ISLAND_EXPANDED_HEIGHT - ISLAND_COLLAPSED_HEIGHT) * grown
                 val placed = work?.let { islandPlacedRect(it, width, height) }
                 val x = (placed?.left ?: 0f) * density
                 val y = (placed?.top ?: 0f) * density
@@ -369,7 +367,7 @@ internal fun DesktopIslandWindow() {
          * different sizes, and the window juddered between them on every frame of the morph.
          * Leaving the window's state alone keeps one writer and one size.
          */
-        LaunchedEffect(window, scale, collapsedWidth, density, showing) {
+        LaunchedEffect(window, density, showing) {
             snapshotFlow { expansion.floatValue }.collect { grown -> applyBounds(grown) }
         }
 
@@ -383,7 +381,7 @@ internal fun DesktopIslandWindow() {
          * pointer could not find and hover, which read as the island having disappeared. Re-assert
          * the bounds on the next frame, once that first application has gone through.
          */
-        LaunchedEffect(window, scale, collapsedWidth, density, showing) {
+        LaunchedEffect(window, density, showing) {
             withFrameNanos { }
             applyBounds(expansion.floatValue)
         }
@@ -433,8 +431,6 @@ internal fun DesktopIslandWindow() {
                         durationMs = { DesktopIslandState.durationMs.value },
                         isPlaying = isPlaying,
                         repeatMode = repeatMode,
-                        scale = scale,
-                        collapsedWidth = collapsedWidth,
                         hovered = hovered.value,
                         controlsVisible = islandShowsControls(hovered.value, menuOpen, seeking),
                         expansion = expansion.floatValue,

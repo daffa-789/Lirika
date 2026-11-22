@@ -70,27 +70,20 @@ import com.music.bitchord.data.model.Song
 import com.music.bitchord.ui.icons.BitChordIcons
 
 /**
- * The capsule's measurements, in dp, before the user's size multiplier.
+ * The capsule's measurements, in dp.
  *
  * Two sizes, not three: the pill the island rests at, and the face it grows into. The island used
  * to carry a Full / Compact / Mini ladder and a switch saying which of them to shrink to — four
  * ways of asking "how much of the song is showing". A Dynamic Island has one shape that changes
  * with what is happening to it, and so does this one.
  *
- * The resting width is the one measurement with an opinion attached to it: the pill is a lyric
- * strip, and how much of a line fits depends on how much screen a person has free. It is a setting
- * (see `DesktopDynamicIslandSettings.collapsedWidth`); 320 dp is only where it starts.
+ * Both widths are fixed: the resting pill is wide enough to read a line of lyric, and the open
+ * face is a little wider. There are no size sliders to keep in step with the glass.
  */
-internal const val ISLAND_COLLAPSED_WIDTH = 320f
+internal const val ISLAND_COLLAPSED_WIDTH = 420f
 internal const val ISLAND_COLLAPSED_HEIGHT = 62f
 internal const val ISLAND_EXPANDED_WIDTH = 480f
 internal const val ISLAND_EXPANDED_HEIGHT = 118f
-
-/** From a discreet pill ... */
-internal const val ISLAND_MIN_COLLAPSED_WIDTH = 240f
-
-/** ... to a lyric strip wide enough for a 4K panel. */
-internal const val ISLAND_MAX_COLLAPSED_WIDTH = 900f
 
 /**
  * The three lines the hovering island can show, and the one line the resting island shows.
@@ -192,19 +185,15 @@ internal fun DesktopIslandCard(
     durationMs: () -> Long,
     isPlaying: Boolean,
     repeatMode: DesktopRepeatMode,
-    scale: Float,
     hovered: Boolean,
-    /** The resting pill's width in dp, before [scale] — the one measurement Settings hands out. */
-    collapsedWidth: Float = ISLAND_COLLAPSED_WIDTH,
     /** The window's own morph, 0 at rest and 1 open — the only source of truth for which face to draw. */
     expansion: Float,
     interactive: Boolean,
     /**
      * Whether the transport and the scrub bar belong on the open face.
      *
-     * Playback opens the capsule so the song is visible, but the controls are only asked for once
-     * the pointer comes to it: until then the face is the cover and the lyric alone, and nothing
-     * else is sitting over the window underneath.
+     * The cover and the lyric are always there; the controls are asked for only once the pointer
+     * comes to the capsule, so nothing sits over the window underneath until then.
      */
     controlsVisible: Boolean = true,
     onPlayPause: () -> Unit = {},
@@ -235,24 +224,15 @@ internal fun DesktopIslandCard(
     // window that holds it are always the same size, to the pixel.
     val density = LocalDensity.current
     val measured = remember { mutableFloatStateOf(0f) }
-    val pillWidth = islandCollapsedWidth(collapsedWidth)
-    val collapsed = pillWidth * scale
-    val span = (islandExpandedWidth(pillWidth) - pillWidth) * scale
+    val collapsed = ISLAND_COLLAPSED_WIDTH
+    val span = ISLAND_EXPANDED_WIDTH - collapsed
 
     Box(
         modifier
             .fillMaxSize()
             .onSizeChanged { size ->
                 val width = with(density) { size.width.toDp() }.value
-                measured.floatValue = if (span <= 0f) {
-                    // A pill set wider than the base face does not grow sideways at all, so there is
-                    // no width to read the morph off. The window's own expansion is the number that
-                    // sized the frame, so it is the honest fallback: without it the open face sat at
-                    // "zero grown" and faded its scrub row out on a wide capsule.
-                    expansion
-                } else {
-                    ((width - collapsed) / span).coerceIn(0f, 1f)
-                }
+                measured.floatValue = ((width - collapsed) / span).coerceIn(0f, 1f)
             }
             .clip(RectangleShape)
             .background(glass)
@@ -265,11 +245,8 @@ internal fun DesktopIslandCard(
         // Switch on the same expansion that sized the window. Measuring the box here disagreed
         // with AWT's bounds on scaled displays, so the open face was drawn inside a closed frame.
         val expandedFace = expansion >= 0.5f
-        // Fill the window, don't hand the face a fixed 480.dp slab. The window is sized with the
-        // user's scale multiplier, so a fixed slab is narrower than its frame whenever scale > 1:
-        // anchored top-start it leaves the slack on the right, and the lyrics, seek row and
-        // controls all read as shifted left of the capsule. Filling the window makes the face and
-        // the glass the same box, so the centred content is centred on the capsule itself.
+        // Fill the window rather than handing the face a fixed slab: the frame is what the window
+        // sized, and filling it keeps the lyrics, seek row and controls centred on the glass.
         if (expandedFace) {
             ExpandedIslandFace(
                 song = song,

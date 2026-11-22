@@ -68,99 +68,61 @@ class DesktopIslandGeometryTest {
     }
 
     @Test
-    fun `the capsule is wider when it opens than when it rests`() {
+    fun `the capsule has one fixed size, wide enough to read and wider when it opens`() {
+        assertEquals(420f, collapsedWidth, 0.01f)
         assertTrue(expandedWidth > collapsedWidth)
         assertTrue(expandedHeight > collapsedHeight)
     }
 
     @Test
-    fun `the resting width is held inside the range the slider offers`() {
-        // The number comes from a preference file, which a hand-edit or an older build can fill
-        // with anything; the capsule must still end up somewhere sane.
-        assertEquals(ISLAND_MIN_COLLAPSED_WIDTH, islandCollapsedWidth(1f), 0.01f)
-        assertEquals(ISLAND_MIN_COLLAPSED_WIDTH, islandCollapsedWidth(239f), 0.01f)
-        assertEquals(420f, islandCollapsedWidth(420f), 0.01f)
-        assertEquals(ISLAND_MAX_COLLAPSED_WIDTH, islandCollapsedWidth(5_000f), 0.01f)
-    }
-
-    @Test
-    fun `widening the pill never makes the open face narrower`() {
-        // The base face is 480 dp, so a pill set past it would otherwise shrink the moment the
-        // pointer landed on it.
-        assertEquals(ISLAND_EXPANDED_WIDTH, islandExpandedWidth(320f), 0.01f)
-        assertEquals(700f, islandExpandedWidth(700f), 0.01f)
-        assertTrue(islandExpandedWidth(600f) >= islandCollapsedWidth(600f))
-        assertTrue(islandExpandedWidth(1_000f) >= islandCollapsedWidth(1_000f))
-    }
-
-    @Test
-    fun `every width the slider offers stays centred and on screen`() {
-        var width = ISLAND_MIN_COLLAPSED_WIDTH
-        while (width <= ISLAND_MAX_COLLAPSED_WIDTH) {
-            val rest = islandPlacedRect(screen, islandCollapsedWidth(width), collapsedHeight)
-            val open = islandPlacedRect(screen, islandExpandedWidth(width), expandedHeight)
-            assertEquals(rest.left + rest.width / 2f, open.left + open.width / 2f, 0.01f)
-            assertTrue(rest.left >= screen.left && rest.right <= screen.right)
-            assertTrue(open.left >= screen.left && open.right <= screen.right)
-            width += 20f
-        }
-    }
-
-    @Test
-    fun `the island keeps its place before a song loads`() {
-        // A one-pixel window cannot be pressed back into view, so "nothing playing" is a pill on
-        // screen rather than a vanished capsule.
-        assertTrue(islandWindowVisible(hideWhenPaused = false, isPlaying = false))
-    }
-
-    @Test
-    fun `only the explicit pause preference hides the island`() {
-        assertTrue(islandWindowVisible(hideWhenPaused = true, isPlaying = true))
-        assertTrue(!islandWindowVisible(hideWhenPaused = true, isPlaying = false))
-    }
-
-    @Test
-    fun `the capsule opens on the pointer and, when asked, on playback`() {
-        val resting = islandWantsExpanded(
-            clickThrough = false, hovered = false, menuOpen = false,
-            seeking = false, isPlaying = true, expandWhenPlaying = false,
+    fun `the island stays off the screen until a song has played`() {
+        assertTrue(
+            !islandWindowVisible(hideWhenPaused = false, isPlaying = false, playbackStarted = false),
+            "opening the app must not put a capsule over the display",
         )
-        assertTrue(!resting, "a lyric pill rests closed")
+        assertTrue(islandWindowVisible(
+            hideWhenPaused = false, isPlaying = false, playbackStarted = true,
+        ), "pausing after a song has played should not take the island away")
+        assertTrue(islandWindowVisible(
+            hideWhenPaused = false, isPlaying = true, playbackStarted = true,
+        ))
+    }
 
-        assertTrue(islandWantsExpanded(
-            clickThrough = false, hovered = true, menuOpen = false,
-            seeking = false, isPlaying = false, expandWhenPlaying = false,
+    @Test
+    fun `only the explicit pause preference hides the island after playback`() {
+        assertTrue(islandWindowVisible(
+            hideWhenPaused = true, isPlaying = true, playbackStarted = true,
         ))
-        assertTrue(islandWantsExpanded(
-            clickThrough = false, hovered = false, menuOpen = true,
-            seeking = false, isPlaying = false, expandWhenPlaying = false,
+        assertTrue(!islandWindowVisible(
+            hideWhenPaused = true, isPlaying = false, playbackStarted = true,
         ))
-        assertTrue(islandWantsExpanded(
-            clickThrough = false, hovered = false, menuOpen = false,
-            seeking = true, isPlaying = false, expandWhenPlaying = false,
-        ))
-        assertTrue(islandWantsExpanded(
-            clickThrough = false, hovered = false, menuOpen = false,
-            seeking = false, isPlaying = true, expandWhenPlaying = true,
-        ), "playback opens it when the preference is on")
+    }
+
+    @Test
+    fun `the capsule opens on the pointer, menu or scrub, never on playback alone`() {
         assertTrue(!islandWantsExpanded(
-            clickThrough = false, hovered = false, menuOpen = false,
-            seeking = false, isPlaying = false, expandWhenPlaying = true,
-        ), "a paused song closes it again")
+            clickThrough = false, hovered = false, menuOpen = false, seeking = false,
+        ), "playing alone leaves a wide, resting pill")
+        assertTrue(islandWantsExpanded(
+            clickThrough = false, hovered = true, menuOpen = false, seeking = false,
+        ))
+        assertTrue(islandWantsExpanded(
+            clickThrough = false, hovered = false, menuOpen = true, seeking = false,
+        ))
+        assertTrue(islandWantsExpanded(
+            clickThrough = false, hovered = false, menuOpen = false, seeking = true,
+        ))
     }
 
     @Test
     fun `click-through outranks every reason to open`() {
         assertTrue(!islandWantsExpanded(
-            clickThrough = true, hovered = true, menuOpen = true,
-            seeking = true, isPlaying = true, expandWhenPlaying = true,
+            clickThrough = true, hovered = true, menuOpen = true, seeking = true,
         ))
     }
 
     @Test
-    fun `the controls wait for the pointer even while playback holds the capsule open`() {
-        // Being open is not the same as being used: a capsule open because a song is running shows
-        // the cover and the lyric, and nothing over the window underneath until it is reached for.
+    fun `the controls wait for the pointer`() {
         assertTrue(islandShowsControls(hovered = true, menuOpen = false, seeking = false))
         assertTrue(islandShowsControls(hovered = false, menuOpen = true, seeking = false))
         assertTrue(islandShowsControls(hovered = false, menuOpen = false, seeking = true))

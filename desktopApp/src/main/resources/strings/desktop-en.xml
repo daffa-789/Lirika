@@ -64,8 +64,6 @@
     <string name="d_island_bottom_right">Bottom right</string>
     <string name="d_island_click_through">Click-through</string>
     <string name="d_island_click_through_subtitle">Clicks over the capsule go to the window underneath. Switch it off here to grab the capsule again.</string>
-    <string name="d_island_expand_playing">Open while playing</string>
-    <string name="d_island_expand_playing_subtitle">Keeps the capsule open for the whole song at its larger size — the cover and the lyric line. The transport and the scrub bar still appear only when the pointer lands on it.</string>
     <string name="d_island_up_next">Up next</string>
     <string name="d_island_up_next_more">…and more in the queue</string>
     <string name="d_island_open_app">Open Lirika…</string>
@@ -91,10 +89,7 @@
     <string name="d_island_reset_position_title">Reset island position</string>
     <string name="d_island_hide_app">Hide Lirika</string>
     <string name="d_island_settings">Island settings…</string>
-    <string name="d_island_size">Island size</string>
     <string name="d_island_top_center">Top center</string>
     <string name="d_island_top_left">Top left</string>
     <string name="d_island_top_right">Top right</string>
-    <string name="d_island_width">Island width</string>
-    <string name="d_island_width_value">%1$d dp</string>
 </resources>
