@@ -165,6 +165,7 @@ internal fun DesktopIslandWindow() {
     val song by DesktopIslandState.currentSong.collectAsState()
     val isPlaying by DesktopIslandState.isPlaying.collectAsState()
     val lines by DesktopIslandState.lyricsLines.collectAsState()
+    val romanizedLines by DesktopIslandState.romanizedLines.collectAsState()
     val repeatMode by DesktopIslandState.repeatMode.collectAsState()
 
     var menuOpen by remember { mutableStateOf(false) }
@@ -428,6 +429,7 @@ internal fun DesktopIslandWindow() {
                 DesktopIslandCard(
                         song = song,
                         lines = lines,
+                        romanizedLines = romanizedLines,
                         positionMs = { DesktopIslandState.currentPositionMs.value },
                         durationMs = { DesktopIslandState.durationMs.value },
                         isPlaying = isPlaying,

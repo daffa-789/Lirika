@@ -102,11 +102,19 @@ internal class IslandLines(
     val activeIndex: Int,
     private val raw: List<LyricLine>,
     private val fallback: String,
+    /**
+     * The romanized sheet, in lockstep with [raw]. Only the line being sung is given a reading:
+     * the pill has room for one extra line, not a second copy of all three.
+     */
+    private val romanized: List<LyricLine> = emptyList(),
 ) {
     val previous: String get() = raw.getOrNull(activeIndex - 1)?.text?.takeIf { it.isNotBlank() } ?: "♪"
     val current: String
         get() = raw.getOrNull(activeIndex)?.text?.takeIf { it.isNotBlank() } ?: fallback
     val next: String get() = raw.getOrNull(activeIndex + 1)?.text?.takeIf { it.isNotBlank() } ?: "♪"
+
+    /** The Latin-script reading of [index], or null when there is none to show. */
+    fun romanizedAt(index: Int): String? = romanized.getOrNull(index)?.text?.takeIf { it.isNotBlank() }
 
     /** The lyric at [index], or null when the track has no real line there. */
     fun lineAt(index: Int): String? = raw.getOrNull(index)?.text?.takeIf { it.isNotBlank() }
@@ -114,7 +122,7 @@ internal class IslandLines(
     /** The timed lyric at [index], used by the island's word sweep. */
     fun lyricAt(index: Int): LyricLine? = raw.getOrNull(index)?.takeIf { it.text.isNotBlank() }
 
-    fun at(index: Int): IslandLines = IslandLines(index, raw, fallback)
+    fun at(index: Int): IslandLines = IslandLines(index, raw, fallback, romanized)
 }
 
 /**
@@ -140,10 +148,25 @@ internal fun activeLyricIndex(lines: List<LyricLine>, positionMs: Long): Int {
     return found
 }
 
-private fun islandLines(lines: List<LyricLine>?, song: Song?, activeIndex: Int): IslandLines =
+/**
+ * Only a reading built from this very sheet can be lined up by index. A stale flow emission from
+ * the previous track is dropped here rather than being shown beside the new words.
+ */
+internal fun islandRomanizedLines(
+    lines: List<LyricLine>?,
+    romanized: List<LyricLine>?,
+): List<LyricLine> = romanized?.takeIf { it.size == lines?.size }.orEmpty()
+
+private fun islandLines(
+    lines: List<LyricLine>?,
+    romanizedLines: List<LyricLine>?,
+    song: Song?,
+    activeIndex: Int,
+): IslandLines =
     IslandLines(
         activeIndex = activeIndex,
         raw = lines.orEmpty(),
+        romanized = islandRomanizedLines(lines, romanizedLines),
         fallback = song?.let { "${it.title} — ${it.artist}" }.orEmpty(),
     )
 
@@ -187,6 +210,8 @@ internal fun islandProgress(positionMs: Long, durationMs: Long): Float {
 internal fun DesktopIslandCard(
     song: Song?,
     lines: List<LyricLine>?,
+    /** Latin-script readings in the same order as [lines], or null for none. */
+    romanizedLines: List<LyricLine>? = null,
     positionMs: () -> Long,
     durationMs: () -> Long,
     isPlaying: Boolean,
@@ -219,7 +244,9 @@ internal fun DesktopIslandCard(
     val activeIndex by remember(lines, song) {
         derivedStateOf { activeLyricIndex(lines.orEmpty(), positionMs()) }
     }
-    val now = remember(lines, song, activeIndex) { islandLines(lines, song, activeIndex) }
+    val now = remember(lines, romanizedLines, song, activeIndex) {
+        islandLines(lines, romanizedLines, song, activeIndex)
+    }
     val karaokeSweepEnabled by DesktopDynamicIslandSettings.karaokeSweepEnabled.collectAsState()
     // The same volume the dock and the OS media keys write; no second source of truth.
     val volume by DesktopPlayerHost.volumeLevel.collectAsState()
@@ -359,6 +386,8 @@ private fun ExpandedIslandFace(
                         IslandLine(text = at.previous, fontSize = 10.sp, active = false)
                         IslandLine(
                             text = at.current,
+                            subText = at.romanizedAt(index),
+                            subFontSize = 10.sp,
                             fontSize = 13.sp,
                             active = true,
                             lyric = at.lyricAt(index),
@@ -518,6 +547,8 @@ private fun CollapsedIslandFace(
                     IslandLine(text = at.previous, fontSize = 9.sp, active = false)
                     IslandLine(
                         text = at.current,
+                        subText = at.romanizedAt(index),
+                        subFontSize = 8.sp,
                         fontSize = 12.sp,
                         active = true,
                         lyric = at.lyricAt(index),
@@ -533,12 +564,18 @@ private fun CollapsedIslandFace(
 
 /**
  * One line of the island's lyric, drawn plainly: no text shadow to blur on every frame.
+ *
+ * A romanized reading sits under the line being sung, the same way the lyrics panel draws its
+ * sub-line. It stays still while the original above it sweeps, so the two never fight for the
+ * same word timing.
  */
 @Composable
 private fun IslandLine(
     text: String,
     fontSize: TextUnit,
     active: Boolean,
+    subText: String? = null,
+    subFontSize: TextUnit = 9.sp,
     lyric: LyricLine? = null,
     positionMs: () -> Long = { 0L },
     karaokeSweepEnabled: Boolean = false,
@@ -548,71 +585,85 @@ private fun IslandLine(
     val sweep = active && karaokeSweepEnabled && lyric?.isWordSynced == true
     var layout by remember(displayText, fontSize) { mutableStateOf<TextLayoutResult?>(null) }
 
-    Box(modifier.fillMaxWidth()) {
-        Text(
-            text = displayText,
-            color = if (sweep) Color.White.copy(alpha = 0.42f)
-            else if (active) Color.White else Color.White.copy(alpha = 0.36f),
-            fontSize = fontSize,
-            fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            onTextLayout = { layout = it },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        if (sweep) {
+    Column(modifier.fillMaxWidth()) {
+        Box(Modifier.fillMaxWidth()) {
             Text(
                 text = displayText,
-                color = Color.White,
+                color = if (sweep) Color.White.copy(alpha = 0.42f)
+                else if (active) Color.White else Color.White.copy(alpha = 0.36f),
                 fontSize = fontSize,
-                fontWeight = FontWeight.Bold,
+                fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .drawWithContent {
-                        val measured = layout ?: return@drawWithContent
-                        val textLength = measured.layoutInput.text.length
-                        if (textLength == 0) return@drawWithContent
-                        val visibleLength = measured.getLineEnd(0, visibleEnd = true)
-                            .coerceIn(0, textLength)
-                        if (visibleLength == 0) return@drawWithContent
-                        val revealed = lyric.revealedChars(positionMs())
-                            .coerceIn(0f, visibleLength.toFloat())
-                        if (revealed <= 0f) return@drawWithContent
-                        if (revealed >= visibleLength) {
-                            drawContent()
-                            return@drawWithContent
-                        }
+                onTextLayout = { layout = it },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (sweep) {
+                Text(
+                    text = displayText,
+                    color = Color.White,
+                    fontSize = fontSize,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .drawWithContent {
+                            val measured = layout ?: return@drawWithContent
+                            val textLength = measured.layoutInput.text.length
+                            if (textLength == 0) return@drawWithContent
+                            val visibleLength = measured.getLineEnd(0, visibleEnd = true)
+                                .coerceIn(0, textLength)
+                            if (visibleLength == 0) return@drawWithContent
+                            val revealed = lyric.revealedChars(positionMs())
+                                .coerceIn(0f, visibleLength.toFloat())
+                            if (revealed <= 0f) return@drawWithContent
+                            if (revealed >= visibleLength) {
+                                drawContent()
+                                return@drawWithContent
+                            }
 
-                        val paragraphStart = measured.getLineStart(0)
-                            .coerceIn(0, (textLength - 1).coerceAtLeast(0))
-                        val rtl = measured.getParagraphDirection(paragraphStart) ==
-                            ResolvedTextDirection.Rtl
-                        val lineLeft = measured.getLineLeft(0)
-                        val lineRight = measured.getLineRight(0)
-                        val charIndex = revealed.toInt().coerceIn(0, visibleLength - 1)
-                        val charProgress = revealed - charIndex
-                        val character = measured.getBoundingBox(charIndex)
-                        val edge = if (rtl) {
-                            character.right - character.width * charProgress
-                        } else {
-                            character.left + character.width * charProgress
-                        }
-                        val clipLeft = if (rtl) edge else lineLeft
-                        val clipRight = if (rtl) lineRight else edge
-                        if (clipLeft >= clipRight) return@drawWithContent
-                        clipRect(
-                            left = clipLeft,
-                            top = measured.getLineTop(0),
-                            right = clipRight,
-                            bottom = measured.getLineBottom(0),
-                        ) {
-                            this@drawWithContent.drawContent()
-                        }
-                    },
+                            val paragraphStart = measured.getLineStart(0)
+                                .coerceIn(0, (textLength - 1).coerceAtLeast(0))
+                            val rtl = measured.getParagraphDirection(paragraphStart) ==
+                                ResolvedTextDirection.Rtl
+                            val lineLeft = measured.getLineLeft(0)
+                            val lineRight = measured.getLineRight(0)
+                            val charIndex = revealed.toInt().coerceIn(0, visibleLength - 1)
+                            val charProgress = revealed - charIndex
+                            val character = measured.getBoundingBox(charIndex)
+                            val edge = if (rtl) {
+                                character.right - character.width * charProgress
+                            } else {
+                                character.left + character.width * charProgress
+                            }
+                            val clipLeft = if (rtl) edge else lineLeft
+                            val clipRight = if (rtl) lineRight else edge
+                            if (clipLeft >= clipRight) return@drawWithContent
+                            clipRect(
+                                left = clipLeft,
+                                top = measured.getLineTop(0),
+                                right = clipRight,
+                                bottom = measured.getLineBottom(0),
+                            ) {
+                                this@drawWithContent.drawContent()
+                            }
+                        },
+                )
+            }
+        }
+        if (!subText.isNullOrBlank()) {
+            Text(
+                text = subText,
+                color = Color.White.copy(alpha = 0.58f),
+                fontSize = subFontSize,
+                fontWeight = FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }

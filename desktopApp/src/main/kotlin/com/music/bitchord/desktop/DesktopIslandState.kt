@@ -22,6 +22,16 @@ internal object DesktopIslandState {
     val lyricsLines = MutableStateFlow<List<LyricLine>?>(null)
 
     /**
+     * Latin-script readings of [lyricsLines], in the very same order.
+     *
+     * The lyric panel romanizes its own copy in Compose state, which the island cannot read — its
+     * window is separate and keeps running when the main window is hidden. This is the island's
+     * own copy, filled only while "Romanized lyrics by default" is on. Null means the capsule
+     * shows the original words alone.
+     */
+    val romanizedLines = MutableStateFlow<List<LyricLine>?>(null)
+
+    /**
      * The playhead, as Compose state rather than a flow.
      *
      * The engine publishes a position four times a second. Collected as a flow, every one of those

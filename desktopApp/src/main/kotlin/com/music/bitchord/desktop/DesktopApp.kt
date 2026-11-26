@@ -44,6 +44,7 @@ import com.music.bitchord.playback.QueueTimeline
 import com.music.bitchord.playback.QueueTimeline.asQueueEntry
 import com.music.bitchord.ui.LyricsProviderState
 import com.music.bitchord.data.lyrics.LyricsSource
+import com.music.bitchord.ui.player.LyricsRomanizationResult
 import com.music.bitchord.ui.player.LyricsSidePanel
 import com.music.bitchord.ui.player.QueueSidePanel
 import com.music.bitchord.ui.player.RepeatModes
@@ -1436,6 +1437,43 @@ fun BitChordDesktopApp() {
                 DesktopTrackLog.log(
                     "island lyrics: no lines for ${playing.title} — ${error.message ?: "unknown error"}",
                 )
+            }
+        }
+    }
+
+    // The island draws in its own window, so the lyric panel's romanized lines — kept in that
+    // panel's Compose state — are out of reach, especially while the main window is hidden. Give
+    // the capsule its own reading of the same sheet whenever the shared setting asks for one.
+    // Keyed on the preference too, so switching it on mid-song does not wait for the next track.
+    val islandRomanization by DesktopPlayerSettings.romanizedLyricsByDefault.collectAsState()
+    LaunchedEffect(islandRomanization) {
+        if (!islandRomanization) DesktopIslandState.romanizedLines.value = null
+    }
+    LaunchedEffect(islandRomanization) {
+        if (!islandRomanization) return@LaunchedEffect
+        DesktopIslandState.lyricsLines.collect { source ->
+            val song = DesktopIslandState.currentSong.value
+            DesktopIslandState.romanizedLines.value = null
+            if (song == null || source.isNullOrEmpty()) return@collect
+            when (
+                val result = DesktopPlayerHost.romanizeLyrics(
+                    trackId = song.videoId,
+                    lines = source,
+                    // Romanization always ends in Latin script; the target is only what the
+                    // provider's endpoint requires, and is deliberately outside its cache key.
+                    targetLanguageTag = "en",
+                )
+            ) {
+                is LyricsRomanizationResult.Romanized -> {
+                    // A slow answer must not put an earlier track's reading back over the new one.
+                    if (
+                        DesktopIslandState.currentSong.value?.videoId == song.videoId &&
+                        DesktopIslandState.lyricsLines.value === source
+                    ) {
+                        DesktopIslandState.romanizedLines.value = result.lines
+                    }
+                }
+                else -> Unit
             }
         }
     }

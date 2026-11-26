@@ -1,7 +1,9 @@
 package com.music.bitchord.desktop
 
+import com.music.bitchord.data.lyrics.LyricLine
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -150,5 +152,26 @@ class DesktopIslandGeometryTest {
         assertTrue(islandShowsControls(hovered = false, menuOpen = true, seeking = false))
         assertTrue(islandShowsControls(hovered = false, menuOpen = false, seeking = true))
         assertTrue(!islandShowsControls(hovered = false, menuOpen = false, seeking = false))
+    }
+
+    @Test
+    fun `romanized readings only pair with the sheet they came from`() {
+        val words = listOf(LyricLine(0, "運命"), LyricLine(1_000, "背景"))
+        val readings = listOf(LyricLine(0, "unmei"), LyricLine(1_000, "haikei"))
+
+        assertEquals(readings, islandRomanizedLines(words, readings))
+        assertTrue(islandRomanizedLines(words, readings.drop(1)).isEmpty())
+        assertTrue(islandRomanizedLines(null, readings).isEmpty())
+    }
+
+    @Test
+    fun `a reading is found by line position, not by text`() {
+        val words = listOf(LyricLine(0, "愛"), LyricLine(1_000, "愛"))
+        val readings = listOf(LyricLine(0, "ai"), LyricLine(1_000, "ai yo"))
+        val lines = IslandLines(0, words, "fallback", islandRomanizedLines(words, readings))
+
+        assertEquals("ai", lines.romanizedAt(0))
+        assertEquals("ai yo", lines.at(1).romanizedAt(1))
+        assertNull(lines.romanizedAt(2))
     }
 }
