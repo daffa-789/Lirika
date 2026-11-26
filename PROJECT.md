@@ -27,6 +27,8 @@ remains as an attribution trail.
   Playing view, and the island as the out-of-window player.
 - Manual crossfade and blend-on-skip; the analyser-driven Automix, its ONNX models and native library
   are gone.
+- Animated Canvas artwork, the legacy full-screen mesh gradient and the full-bleed hero treatment
+  were also removed. Still-cover artwork and the current artwork-derived backdrop remain.
 - Google sign-in for YouTube Music personalization; no third-party account integrations on desktop.
 - Release manifests (`SHA256SUMS.txt`) generated for every tagged Windows/Linux build.
 

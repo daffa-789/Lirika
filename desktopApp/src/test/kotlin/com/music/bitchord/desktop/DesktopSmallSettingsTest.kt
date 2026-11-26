@@ -3,6 +3,7 @@ package com.music.bitchord.desktop
 import java.nio.file.Files
 import kotlin.test.AfterTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -51,6 +52,27 @@ class DesktopSmallSettingsTest {
         ).forEach { name ->
             assertFalse(DesktopLocalMusic.isMusic(file(name, 4_000_000)), name)
         }
+    }
+
+    // ── Storage row's cache size ─────────────────────────────────────────
+
+    @Test
+    fun `cache sizes read the way the Storage row shows them`() {
+        assertEquals("512 MB", formatCacheSize(512))
+        assertEquals("1 GB", formatCacheSize(1024))
+
+        // The Storage row is localised, so half a gigabyte reads "1.5 GB" on an
+        // English machine and "1,5 GB" on a Polish one. Both are correct, and
+        // neither the code nor the test gets to decide which: what the row
+        // promises is the number and the unit. So that is what is asserted, and
+        // the decimal separator is left to the user's locale.
+        val half = formatCacheSize(1536)
+        assertTrue(half.endsWith(" GB"), "expected a GB unit, got: $half")
+        assertEquals(
+            1.5,
+            half.removeSuffix(" GB").replace(',', '.').toDouble(),
+            0.0001,
+        )
     }
 
 }

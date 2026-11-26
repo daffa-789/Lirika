@@ -7,11 +7,11 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Folds a name to the form two spellings of one artist have in common.
  *
- * ## Why this is not [com.music.bitchord.data.canvas.normalizeForMatch]
+ * ## Why the fold is conservative
  *
- * That one is right for artwork matching and wrong here, because it
- * reduces to `[^a-z0-9\s]` before comparing — every character that is not a
- * lowercase ASCII letter becomes a space. A Cyrillic, Greek, Devanagari or CJK
+ * An earlier artwork-matching helper reduced to `[^a-z0-9\s]` before comparing
+ * — every character that is not a lowercase ASCII letter became a space. A
+ * Cyrillic, Greek, Devanagari or CJK
  * name therefore folds to the empty string, and every one of them folds to the
  * *same* empty string: asking for `Мата` would accept a page called `Мета`, and
  * `中島美嘉` would match anything at all. An exact-name check that does that is

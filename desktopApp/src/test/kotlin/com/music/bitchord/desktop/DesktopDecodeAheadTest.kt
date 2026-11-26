@@ -98,7 +98,9 @@ class DesktopDecodeAheadTest {
     @Test
     fun `seeking after the end plays again`() {
         val reader = ahead(CountingSource(blocks = 2))
-        while (reader.readSamples() != null) Unit
+        while (reader.readSamples() != null) {
+            // drain to the end
+        }
         reader.seek(0)
         assertEquals(0f, reader.readSamples()!![0])
         reader.close()

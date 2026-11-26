@@ -5,7 +5,6 @@
     <string name="d_account">Akun</string>
     <string name="d_addon_url">URL addon</string>
     <string name="d_an_addon_server">Sebuah server addon — Lirika bertanya lewat HTTP biasa dan tidak menjalankan kodenya. Indeks modul yang kompatibel juga bisa dan disimpan dengan cara yang sama.</string>
-    <string name="d_animated_canvas">Kanvas animasi</string>
     <string name="d_autoplay_wont_suggest_a_song_already_played_or_suggested">AutoPlay tidak akan menyarankan lagu yang sudah diputar atau disarankan pada sesi ini</string>
     <string name="d_available_offline">Tersedia offline</string>
     <string name="d_bitchord_is_free_software_and_so_is_everything_it_is_bui">Lirika adalah perangkat lunak bebas, begitu pula semua yang menjadi fondasinya.</string>
@@ -41,14 +40,12 @@
     <string name="d_search_your_music">Cari musikmu</string>
     <string name="d_shorten_long_gaps_rather_than_playing_them_out">Persingkat jeda panjang alih-alih memutarnya penuh</string>
     <string name="d_show_bitchord_in_the_system_tray_with_playback_controls">Tampilkan Lirika di baki sistem, dengan kontrol pemutaran</string>
-    <string name="d_show_motion_artwork_when_it_is_available">Tampilkan sampul bergerak bila tersedia</string>
     <string name="d_sources_are_tried_in_this_order">Sumber dicoba dalam urutan ini. Seret untuk mengubah urutannya. Sumber pertama yang punya lirik menang, kecuali lirik per suku kata diprioritaskan.</string>
     <string name="d_third_party_licenses">Lisensi pihak ketiga</string>
     <string name="d_this_track_is_not_from_youtube_music_so_it_can_only_go_i">Trek ini bukan dari YouTube Music, jadi hanya bisa masuk ke playlist yang disimpan di sini.</string>
     <string name="d_title_bar">Bilah judul</string>
     <string name="d_tray_icon">Ikon baki</string>
     <string name="d_turn_off">Matikan</string>
-    <string name="d_use_the_older_blob_backdrop_behind_the_player">Gunakan latar blob lama di belakang pemutar</string>
     <string name="d_volume">Volume</string>
     <string name="d_what_follows_the_verb_on_the_profile">Yang mengikuti kata kerja di profil. Kosongkan untuk memakai %1$s.</string>
     <string name="cancel_download">Batalkan unduhan</string>

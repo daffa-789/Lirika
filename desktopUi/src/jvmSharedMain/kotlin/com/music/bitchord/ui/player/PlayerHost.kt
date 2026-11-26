@@ -2,9 +2,6 @@ package com.music.bitchord.ui.player
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.unit.IntSize
-import com.music.bitchord.data.canvas.CanvasArtwork
 import com.music.bitchord.data.lyrics.LyricLine
 import com.music.bitchord.data.lyrics.LyricsSource
 import com.music.bitchord.data.model.Song
@@ -22,23 +19,13 @@ import kotlinx.coroutines.flow.StateFlow
  *
  * The player itself — its layout, its gestures, its animations, the lyric sheet
  * and the queue — is one piece of code for the phone and the desktop alike.
- * What differs is underneath it: where settings are kept, how a looping clip is
- * decoded, what an audio output is, where the lyrics sit on the clock. Each
+ * What differs is underneath it: where settings are kept, what an audio
+ * output is, where the lyrics sit on the clock. Each
  * application answers those once, here, and installs its answer with
  * [PlayerPlatform.install] before the player is first drawn.
  */
 interface PlayerHost {
     val settings: PlayerSettingsSource
-
-    /** A Canvas already settled for [song], without a lookup. */
-    fun cachedCanvas(song: Song): CanvasArtwork?
-
-    /** Looks a Canvas up for [song]; null is the normal answer. */
-    suspend fun canvasFor(song: Song): CanvasArtwork?
-
-    /** The looping clip over the cover, decoded however this platform decodes video. */
-    @Composable
-    fun CanvasVideo(spec: CanvasVideoSpec, modifier: Modifier)
 
     /**
      * Artwork for [song], resolving covers that live inside a remote file
@@ -162,18 +149,14 @@ object PlayerPlatform {
 
 /** The settings the player reads, named and typed as the phone's AppSettings has them. */
 interface PlayerSettingsSource {
-    val animatedCanvas: StateFlow<Boolean>
     val audioQualityCellular: StateFlow<AudioQuality>
     val audioQualityWifi: StateFlow<AudioQuality>
-    val canvasOverCellular: StateFlow<Boolean>
-    val fullBleedArtwork: StateFlow<Boolean>
     val hideSongStatus: StateFlow<Boolean>
     val showQueueHistory: StateFlow<Boolean>
     val hideVolumeBar: StateFlow<Boolean>
     /** Hide the device status bar while the player is up. Always false where there is none. */
     val hideStatusBar: StateFlow<Boolean>
     val lastPlayerScreen: StateFlow<LastPlayerScreen>
-    val legacyMeshGradient: StateFlow<Boolean>
     val lyricsBlur: StateFlow<Boolean>
     /** Whether new lyric sheets should request Latin-script pronunciation automatically. */
     val romanizedLyricsByDefault: StateFlow<Boolean>
@@ -246,79 +229,6 @@ sealed interface LyricsRomanizationResult {
     data object AlreadyRomanized : LyricsRomanizationResult
     data object Unavailable : LyricsRomanizationResult
 }
-
-/** How a clip fills the bounds supplied by its caller. */
-enum class CanvasContentMode {
-    CROP,
-    FIT_PORTRAIT,
-}
-
-/** Everything [CanvasArtworkPlayer] is asked, handed to the platform's decoder as one value. */
-class CanvasVideoSpec(
-    val canvas: CanvasArtwork,
-    val isPlaying: Boolean,
-    val contentMode: CanvasContentMode,
-    val alignPortraitTop: Boolean,
-    val onAspectRatioChanged: (Float) -> Unit,
-    val portraitRevealBounds: IntSize,
-    val presentationAlpha: () -> Float,
-    val onRenderedChanged: (Boolean) -> Unit,
-    val onFrameCaptured: (ImageBitmap) -> Unit,
-    val refreshFrameEveryMs: Long?,
-    val frameCapturePx: Int,
-    val onCoverChanged: (Float) -> Unit,
-    val bottomFade: Float,
-    val bottomFadeEndPx: Float?,
-    val pausedForTransition: Boolean,
-)
-
-/**
- * The looping video that plays over a track's cover art — see
- * [PlayerHost.CanvasVideo] for the decoder behind it on each platform.
- */
-@Composable
-fun CanvasArtworkPlayer(
-    canvas: CanvasArtwork,
-    isPlaying: Boolean,
-    modifier: Modifier = Modifier,
-    contentMode: CanvasContentMode = CanvasContentMode.CROP,
-    alignPortraitTop: Boolean = false,
-    onAspectRatioChanged: (Float) -> Unit = {},
-    portraitRevealBounds: IntSize = IntSize.Zero,
-    presentationAlpha: () -> Float = { 1f },
-    onRenderedChanged: (Boolean) -> Unit = {},
-    onFrameCaptured: (ImageBitmap) -> Unit = {},
-    refreshFrameEveryMs: Long? = null,
-    frameCapturePx: Int = CANVAS_FRAME_CAPTURE_PX,
-    onCoverChanged: (Float) -> Unit = {},
-    bottomFade: Float = 0f,
-    bottomFadeEndPx: Float? = null,
-    pausedForTransition: Boolean = false,
-) {
-    PlayerPlatform.host.CanvasVideo(
-        CanvasVideoSpec(
-            canvas = canvas,
-            isPlaying = isPlaying,
-            contentMode = contentMode,
-            alignPortraitTop = alignPortraitTop,
-            onAspectRatioChanged = onAspectRatioChanged,
-            portraitRevealBounds = portraitRevealBounds,
-            presentationAlpha = presentationAlpha,
-            onRenderedChanged = onRenderedChanged,
-            onFrameCaptured = onFrameCaptured,
-            refreshFrameEveryMs = refreshFrameEveryMs,
-            frameCapturePx = frameCapturePx,
-            onCoverChanged = onCoverChanged,
-            bottomFade = bottomFade,
-            bottomFadeEndPx = bottomFadeEndPx,
-            pausedForTransition = pausedForTransition,
-        ),
-        modifier,
-    )
-}
-
-/** The longest edge of a frame handed to [CanvasArtworkPlayer]'s onFrameCaptured. */
-const val CANVAS_FRAME_CAPTURE_PX = 128
 
 /** Media3's repeat modes, by value, so the transport can speak them without Media3. */
 object RepeatModes {

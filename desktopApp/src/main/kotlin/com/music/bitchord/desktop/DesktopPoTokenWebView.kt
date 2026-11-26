@@ -123,6 +123,8 @@ class DesktopPoTokenWebView private constructor(
     }
 
     /** Builds the page and starts BotGuard; on the FX thread. */
+    // WebEngine hands back the legacy netscape JSObject bridge; there is no newer JavaFX API.
+    @Suppress("DEPRECATION")
     private fun loadHtmlAndObtainBotguard() {
         TrackLog.d(TAG, "loadHtmlAndObtainBotguard() called")
         engine = WebEngine()
@@ -321,7 +323,7 @@ class DesktopPoTokenWebView private constructor(
                 .build()
             val (httpCode, body) = withContext(Dispatchers.IO) {
                 Http.client.newCall(request).execute().use { response ->
-                    response.code to if (response.code == 200) response.body?.string() else null
+                    response.code to if (response.code == 200) response.body.string() else null
                 }
             }
             if (body.isNullOrEmpty()) {

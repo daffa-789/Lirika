@@ -32,7 +32,7 @@ Lirika is a desktop-first music player for people who use YouTube Music. Sign in
 
 - Synchronized lyrics from supported lyric sources.
 - A floating mini-player with playback controls and rolling lyrics.
-- Animated artwork and album-art-based color themes.
+- Album-art-based color themes.
 - Local music library and offline downloads.
 - Playback options including crossfade, playback speed, skip silence, sleep timer, and equalizer integration.
 

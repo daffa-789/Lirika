@@ -357,6 +357,9 @@ internal class DesktopMprisController(
 
         override fun OpenUri(uri: String) = Unit
 
+        // dbus-java's Properties.Get is generic, but the property table holds erasures of the
+        // actual D-Bus types; the caller's A cannot be checked here without changing behaviour.
+        @Suppress("UNCHECKED_CAST")
         override fun <A> Get(interfaceName: String, propertyName: String): A =
             controller.property(interfaceName, propertyName) as A
 

@@ -23,13 +23,13 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
+import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.rounded.DownloadDone
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.PlaylistAdd
-import androidx.compose.material.icons.rounded.PlaylistPlay
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SwipeToDismissBox
@@ -235,6 +235,9 @@ fun libraryGrid(available: Dp): LibraryGridSpec {
  * menu.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+// The swipe-to-queue gesture relies on confirmValueChange to snap back and fire the action;
+// migrating to dynamic anchors would change gesture behaviour, so keep the deprecated callback.
+@Suppress("DEPRECATION")
 @Composable
 fun SongRow(
     song: Song,
@@ -427,7 +430,7 @@ private fun QueueSwipeBackground(swipeState: SwipeToDismissBoxState) {
 private fun QueueSwipeLabel(playNext: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
-            if (playNext) Icons.Rounded.PlaylistPlay else Icons.Rounded.PlaylistAdd,
+            if (playNext) Icons.AutoMirrored.Rounded.PlaylistPlay else Icons.AutoMirrored.Rounded.PlaylistAdd,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(20.dp),

@@ -7,7 +7,6 @@
     <string name="d_account">Account</string>
     <string name="d_addon_url">Addon URL</string>
     <string name="d_an_addon_server">An addon server — Lirika asks it over plain HTTP and runs no code from it. A compatible module index also works and is stored as one.</string>
-    <string name="d_animated_canvas">Animated canvas</string>
     <string name="d_autoplay_wont_suggest_a_song_already_played_or_suggested">AutoPlay won’t suggest a song already played or suggested this session</string>
     <string name="d_available_offline">Available offline</string>
     <string name="d_bitchord_is_free_software_and_so_is_everything_it_is_bui">Lirika is free software, and so is everything it is built on.</string>
@@ -43,14 +42,12 @@
     <string name="d_search_your_music">Search your music</string>
     <string name="d_shorten_long_gaps_rather_than_playing_them_out">Shorten long gaps rather than playing them out</string>
     <string name="d_show_bitchord_in_the_system_tray_with_playback_controls">Show Lirika in the system tray, with playback controls</string>
-    <string name="d_show_motion_artwork_when_it_is_available">Show motion artwork when it is available</string>
     <string name="d_sources_are_tried_in_this_order">Sources are tried in this order. Drag to reorder them. The first source with lyrics wins unless syllable lyrics are prioritized.</string>
     <string name="d_third_party_licenses">Third-party licenses</string>
     <string name="d_this_track_is_not_from_youtube_music_so_it_can_only_go_i">This track is not from YouTube Music, so it can only go in a playlist kept here.</string>
     <string name="d_title_bar">Title bar</string>
     <string name="d_tray_icon">Tray icon</string>
     <string name="d_turn_off">Turn off</string>
-    <string name="d_use_the_older_blob_backdrop_behind_the_player">Use the older blob backdrop behind the player</string>
     <string name="d_volume">Volume</string>
     <string name="d_what_follows_the_verb_on_the_profile">What follows the verb on the profile. Leave it empty to use %1$s.</string>
     <string name="cancel_download">Cancel download</string>

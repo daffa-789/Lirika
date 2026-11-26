@@ -78,7 +78,6 @@ import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.icons.BitChordIcons
 import com.music.bitchord.ui.theme.BcColors
 import com.music.bitchord.ui.theme.stableStatusBarInsets
-import com.music.bitchord.data.canvas.CanvasArtwork
 import com.music.bitchord.data.model.LikeStatus
 import com.music.bitchord.data.model.Song
 
@@ -347,29 +346,18 @@ private const val GLOW_PEAK = 0.5f
 private const val GLOW_RADIUS = 0.95f
 
 /**
- * The landscape player's sleeve: the still cover, and over it the looping
- * clip when there is one.
+ * The landscape player's sleeve: the still cover.
  *
  * Draws from the screen's own [request][PlayerArtwork.request] rather than a
  * request of its own, so it shares the portrait sleeve's bitmap, its retries
  * and its [loaded][PlayerArtwork.loaded] — rotating never reloads the cover.
- *
- * The clip keeps playing whichever pane is up. The portrait player stops it
- * because its sleeve shrinks to a thumbnail behind a panel; this one never
- * shrinks.
  */
 @Composable
 internal fun LandscapeArtwork(
     artRequest: ImageRequest,
     artLoaded: Boolean,
     onArtState: (AsyncImagePainter.State) -> Unit,
-    canvas: CanvasArtwork?,
-    canvasRendered: Boolean,
-    isPlaying: Boolean,
-    onCanvasRenderedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    /** Halts the clip for a transition — see [CanvasArtworkPlayer]'s own. */
-    pausedForTransition: Boolean = false,
     /**
      * The sleeve's shape, asked for each frame: its corner rounds off into the
      * mini player's cover's as the player docks into it.
@@ -392,7 +380,7 @@ internal fun LandscapeArtwork(
     glowRounded: Boolean = false,
     overlay: @Composable BoxScope.() -> Unit = {},
 ) {
-    val casts = artLoaded || canvasRendered
+    val casts = artLoaded
     // The aura blooms for exactly as long as the blend the scrubber shows, so the two agree on
     // one signal rather than each keeping their own clock.
     val mixing by PlayerSettings.mixInProgress.collectAsStateWithLifecycle()
@@ -470,7 +458,7 @@ internal fun LandscapeArtwork(
                 },
             contentAlignment = Alignment.Center,
         ) {
-            if (!artLoaded && !canvasRendered) {
+            if (!artLoaded) {
                 Icon(
                     imageVector = BitChordIcons.MusicNote,
                     contentDescription = null,
@@ -483,21 +471,8 @@ internal fun LandscapeArtwork(
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 onState = onArtState,
-                // Not drawn under a clip that got there first — see the
-                // portrait sleeve's note on TextureView stacking order.
-                modifier = Modifier
-                    .fillMaxSize()
-                    .drawWithContent { if (artLoaded || !canvasRendered) drawContent() },
+                modifier = Modifier.fillMaxSize(),
             )
-            canvas?.let { clip ->
-                CanvasArtworkPlayer(
-                    canvas = clip,
-                    isPlaying = isPlaying,
-                    pausedForTransition = pausedForTransition,
-                    onRenderedChanged = onCanvasRenderedChange,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
         }
         overlay()
     }

@@ -5,7 +5,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import com.music.bitchord.data.canvas.CanvasArtwork
 import com.music.bitchord.data.lyrics.LyricLine
 import com.music.bitchord.data.lyrics.LyricsSource
 import com.music.bitchord.data.lyrics.LyricsTranslation
@@ -15,7 +14,6 @@ import com.music.bitchord.data.settings.LastPlayerScreen
 import com.music.bitchord.data.settings.TransitionWindow
 import com.music.bitchord.ui.player.AudioOutputDevice
 import com.music.bitchord.ui.player.AudioOutputKind
-import com.music.bitchord.ui.player.CanvasVideoSpec
 import com.music.bitchord.ui.player.LyricsRomanizationResult
 import com.music.bitchord.ui.player.LyricsTranslationResult
 import com.music.bitchord.ui.player.MAX_LYRICS_OFFSET_MS
@@ -34,29 +32,20 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.withContext
 import java.util.Locale
 
 /**
  * The desktop's answers to the shared player's [PlayerHost].
  *
  * The player itself is the phone's, line for line; this is only what sits
- * under it here — the desktop's settings, its FFmpeg Canvas decoder, its mixers
- * as outputs, its party, its translation client. The window keeps the few
- * pieces of live state it owns ([volumeLevel], [pipelineDialog]) up to date.
+ * under it here — the desktop's settings, its mixers as outputs, its party, its
+ * translation client. The window keeps the few pieces of live state it owns
+ * ([volumeLevel], [pipelineDialog]) up to date.
  */
 internal object DesktopPlayerHost : PlayerHost {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override val settings: DesktopPlayerSettings = DesktopPlayerSettings
-
-    override fun cachedCanvas(song: Song): CanvasArtwork? = DesktopCanvasClient.cached(song)?.toShared()
-
-    override suspend fun canvasFor(song: Song): CanvasArtwork? =
-        withContext(Dispatchers.IO) { DesktopCanvasClient.lookup(song) }?.toShared()
-
-    @Composable
-    override fun CanvasVideo(spec: CanvasVideoSpec, modifier: Modifier) = DesktopCanvasVideo(spec, modifier)
 
     // Local files carry their art on the row already; there is no remote store to ask.
     @Composable
@@ -165,11 +154,8 @@ internal object DesktopPlayerHost : PlayerHost {
 internal object DesktopPlayerSettings : PlayerSettingsSource {
     private val persistence by lazy { DesktopPersistence() }
 
-    override val animatedCanvas = MutableStateFlow(false)
     override val audioQualityCellular = MutableStateFlow(AudioQuality.LOSSLESS)
     override val audioQualityWifi = MutableStateFlow(AudioQuality.LOSSLESS)
-    override val canvasOverCellular = MutableStateFlow(true)
-    override val fullBleedArtwork = MutableStateFlow(false)
     override val hideSongStatus = MutableStateFlow(false)
     override val showQueueHistory = MutableStateFlow(false)
     override val hideVolumeBar = MutableStateFlow(false)
@@ -179,7 +165,6 @@ internal object DesktopPlayerSettings : PlayerSettingsSource {
         runCatching { LastPlayerScreen.valueOf(persistence.string(KEY_LAST_SCREEN, "MAIN")) }
             .getOrDefault(LastPlayerScreen.MAIN),
     )
-    override val legacyMeshGradient = MutableStateFlow(false)
     override val lyricsBlur = MutableStateFlow(true)
     override val romanizedLyricsByDefault =
         MutableStateFlow(persistence.boolean(KEY_ROMANIZED_LYRICS_BY_DEFAULT, false))
